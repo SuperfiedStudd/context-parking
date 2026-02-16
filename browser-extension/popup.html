@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Context Parking</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Context Parking</h1>
+
+    <div class="settings">
+      <label for="url">Edge Function URL</label>
+      <input type="text" id="url" placeholder="https://xxx.supabase.co/functions/v1/capture-extension" />
+
+      <label for="key">Shared Key</label>
+      <input type="password" id="key" placeholder="Your EXTENSION_SHARED_KEY" />
+
+      <button id="save" class="btn-secondary">Save Settings</button>
+    </div>
+
+    <hr />
+
+    <button id="capture" class="btn-primary">Capture This Chat</button>
+
+    <div id="status" class="status idle">Ready</div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

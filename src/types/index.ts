@@ -38,3 +38,17 @@ export interface CaptureEvent {
 
 export type ProjectFilter = 'all' | 'active' | 'dormant' | 'unsent_drafts' | 'unexplored_alternatives';
 export type ViewMode = 'list' | 'grid';
+
+export interface DbCapture {
+  id: string;
+  source: string;
+  chat_title: string;
+  raw_transcript: string;
+  summary: string;
+  objective: string;
+  alternatives: string[];
+  chosen_direction: string;
+  next_action: string;
+  resolved_to_project_id: string | null;
+  created_at: string;
+}
