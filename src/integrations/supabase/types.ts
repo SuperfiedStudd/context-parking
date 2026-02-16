@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      captures: {
+        Row: {
+          alternatives: Json | null
+          chat_title: string | null
+          chosen_direction: string | null
+          created_at: string
+          id: string
+          next_action: string | null
+          objective: string | null
+          raw_transcript: string | null
+          resolved_to_project_id: string | null
+          source: string | null
+          summary: string | null
+        }
+        Insert: {
+          alternatives?: Json | null
+          chat_title?: string | null
+          chosen_direction?: string | null
+          created_at?: string
+          id?: string
+          next_action?: string | null
+          objective?: string | null
+          raw_transcript?: string | null
+          resolved_to_project_id?: string | null
+          source?: string | null
+          summary?: string | null
+        }
+        Update: {
+          alternatives?: Json | null
+          chat_title?: string | null
+          chosen_direction?: string | null
+          created_at?: string
+          id?: string
+          next_action?: string | null
+          objective?: string | null
+          raw_transcript?: string | null
+          resolved_to_project_id?: string | null
+          source?: string | null
+          summary?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

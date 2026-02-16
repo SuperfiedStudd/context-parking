@@ -1,1 +1,4 @@
 project_id = "sdjdzvcwfcdtngknrasp"
+
+[functions.capture-extension]
+verify_jwt = false

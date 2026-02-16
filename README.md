@@ -1,73 +1,73 @@
-# Welcome to your Lovable project
+# Context Parking
 
-## Project info
+A local-first tool for parking context from AI chat sessions, tracking decisions, and managing follow-ups.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Tech Stack
 
-## How can I edit this code?
+- React + Vite + TypeScript
+- Tailwind CSS + shadcn/ui
+- Zustand (local state)
+- Supabase (captures database + edge functions)
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Getting Started
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Browser Extension Setup
 
-**Use GitHub Codespaces**
+The browser extension captures ChatGPT and Claude conversations, sends them to a Supabase Edge Function for AI summarization, and stores them in the database.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 1. Generate a Shared Key
 
-## What technologies are used for this project?
+```sh
+openssl rand -hex 32
+```
 
-This project is built with:
+Copy the output — you'll use it in the next two steps.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 2. Add the Key to Supabase
 
-## How can I deploy this project?
+Go to your [Supabase Edge Function Secrets](https://supabase.com/dashboard/project/sdjdzvcwfcdtngknrasp/settings/functions) and add:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+- **Name:** `EXTENSION_SHARED_KEY`
+- **Value:** the key you generated above
 
-## Can I connect a custom domain to my Lovable project?
+### 3. Load the Extension in Chrome
 
-Yes, you can!
+1. Open `chrome://extensions/`
+2. Enable **Developer mode** (top right)
+3. Click **Load unpacked**
+4. Select the `browser-extension/` directory from this repo
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 4. Configure the Extension
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Click the extension icon in Chrome and enter:
+
+- **Edge Function URL:** `https://sdjdzvcwfcdtngknrasp.supabase.co/functions/v1/capture-extension`
+- **Shared Key:** the key from step 1
+
+Click **Save Settings**.
+
+### 5. Capture a Conversation
+
+1. Navigate to [ChatGPT](https://chat.openai.com) or [Claude](https://claude.ai)
+2. Open a conversation
+3. Click the extension icon
+4. Click **Capture This Chat**
+
+The conversation will be summarized by AI and stored in your Supabase database. View captured sessions on the **Capture** page in the web app.
+
+---
+
+## Architecture
+
+- **Browser Extension** → POST with `x-cp-key` header → **Edge Function** → AI summarize → **Supabase DB**
+- **Web App** → reads captures from DB via anon key (no shared key needed)
+- No authentication, no user accounts — just a single shared secret protecting writes
