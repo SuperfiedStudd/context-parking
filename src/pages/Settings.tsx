@@ -1,4 +1,5 @@
 import { Layout } from '@/components/Layout';
+import { SystemStatusPanel } from '@/components/SystemStatusPanel';
 import { useStore } from '@/store/useStore';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -256,6 +257,8 @@ export default function SettingsPage({ onOpenWizard }: SettingsPageProps) {
               </Button>
             </div>
           </div>
+          {/* System Status Debug */}
+          <SystemStatusPanel />
         </div>
 
         {/* Clear data dialog */}

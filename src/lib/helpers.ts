@@ -52,3 +52,54 @@ export function generateContextPrompt(project: {
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
+
+export function compileContextInjectPrompt(project: {
+  title: string;
+  objective: string;
+  chosenDirection: string;
+  alternatives: string[];
+  nextAction: string;
+  lastActiveAt: string;
+  activityLog: { description: string; timestamp: string }[];
+}): string {
+  const lines: string[] = [];
+
+  lines.push('You are continuing work on the following project.');
+  lines.push('');
+  lines.push('PROJECT TITLE:');
+  lines.push(project.title);
+  lines.push('');
+  lines.push('OBJECTIVE:');
+  lines.push(project.objective || 'Not set');
+  lines.push('');
+  lines.push('CHOSEN DIRECTION:');
+  lines.push(project.chosenDirection || 'Not set');
+  lines.push('');
+  lines.push('ALTERNATIVES CONSIDERED:');
+  if (project.alternatives.length > 0) {
+    project.alternatives.forEach((a, i) => lines.push(`${i + 1}. ${a}`));
+  } else {
+    lines.push('None');
+  }
+  lines.push('');
+  lines.push('NEXT ACTION:');
+  lines.push(project.nextAction || 'Not set');
+  lines.push('');
+  lines.push('RECENT ACTIVITY:');
+  const recentEvents = project.activityLog.slice(0, 3);
+  if (recentEvents.length > 0) {
+    recentEvents.forEach((e) => {
+      lines.push(`- ${e.description} (${relativeTime(e.timestamp)})`);
+    });
+  } else {
+    lines.push('No recent activity');
+  }
+  lines.push('');
+  lines.push('CURRENT STATUS:');
+  lines.push(`Last active ${relativeTime(project.lastActiveAt)}`);
+  lines.push('');
+  lines.push('Continue from this state. Do not restate the summary.');
+  lines.push('Move directly into execution planning.');
+
+  return lines.join('\n');
+}

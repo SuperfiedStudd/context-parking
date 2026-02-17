@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useState, useRef, useEffect } from 'react';
 import {
-  ArrowLeft, Sparkles, Copy, Check, CheckCircle, Send, Bell, Clock, Edit3,
+  ArrowLeft, FileText, Copy, Check, CheckCircle, Send, Bell, Clock, Edit3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { relativeTime } from '@/lib/helpers';
@@ -92,7 +92,7 @@ export default function ProjectDetail() {
       <div className="flex items-start justify-between mb-6">
         <h1 className="text-xl font-bold">{project.title}</h1>
         <Button className="gap-2" onClick={() => setDrawerOpen(true)}>
-          <Sparkles className="w-4 h-4" /> Generate Context Prompt
+          <FileText className="w-4 h-4" /> Compile Context Inject Prompt
         </Button>
       </div>
 
