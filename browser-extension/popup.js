@@ -55,7 +55,8 @@ captureBtn.addEventListener("click", async () => {
           setStatus("Summarizing & saving…", "sending");
 
           try {
-            const edgeUrl = `${config.cpSupabaseUrl}/functions/v1/capture-and-summarize`;
+            const baseUrl = config.cpSupabaseUrl.replace(/\/+$/, "");
+            const edgeUrl = `${baseUrl}/functions/v1/capture-and-summarize`;
 
             const res = await fetch(edgeUrl, {
               method: "POST",
