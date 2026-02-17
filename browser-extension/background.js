@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     chrome.storage.local.set({
       cpConfigSynced: true,
-      cpSupabaseUrl: config.supabase.url,
+      cpSupabaseUrl: config.supabase.url.replace(/\/+$/, ""),
       cpProvider: provider,
       cpApiKey: apiKey,
     });
