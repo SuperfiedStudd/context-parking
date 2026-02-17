@@ -1,30 +1,9 @@
-const urlInput = document.getElementById("url");
-const saveBtn = document.getElementById("save");
+const EDGE_URL = "https://sdjdzvcwfcdtngknrasp.supabase.co/functions/v1/capture-and-summarize";
+
 const captureBtn = document.getElementById("capture");
 const statusEl = document.getElementById("status");
 
-// Load saved settings
-chrome.storage.local.get(["cpSupabaseUrl"], (data) => {
-  if (data.cpSupabaseUrl) urlInput.value = data.cpSupabaseUrl;
-});
-
-// Save settings
-saveBtn.addEventListener("click", () => {
-  chrome.storage.local.set(
-    { cpSupabaseUrl: urlInput.value.trim() },
-    () => setStatus("Settings saved", "success")
-  );
-});
-
-// Capture
 captureBtn.addEventListener("click", async () => {
-  const supabaseUrl = urlInput.value.trim();
-
-  if (!supabaseUrl) {
-    setStatus("Configure Supabase URL first", "error");
-    return;
-  }
-
   setStatus("Capturing…", "capturing");
 
   try {
@@ -51,9 +30,7 @@ captureBtn.addEventListener("click", async () => {
       setStatus("Summarizing & saving…", "sending");
 
       try {
-        const edgeUrl = `${supabaseUrl}/functions/v1/capture-and-summarize`;
-
-        const res = await fetch(edgeUrl, {
+        const res = await fetch(EDGE_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
