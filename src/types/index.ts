@@ -49,6 +49,7 @@ export interface DbCapture {
   alternatives: string[];
   chosen_direction: string;
   next_action: string;
+  executive_snapshot: string;
   resolved_to_project_id: string | null;
   created_at: string;
 }

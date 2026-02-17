@@ -12,6 +12,11 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { fetchCaptures, markCapturePromoted } from '@/lib/api/captures';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -19,7 +24,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, MessageSquare, Bot, ArrowRight } from 'lucide-react';
+import { Upload, MessageSquare, Bot, ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 const generateId = () => Math.random().toString(36).substring(2, 10);
@@ -167,31 +172,7 @@ export default function Capture() {
           ) : (
             <div className="space-y-3">
               {dbCaptures.map((cap) => (
-                <Card key={cap.id} className="card-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {cap.source === 'chatgpt' ? (
-                          <Bot className="w-4 h-4 text-primary shrink-0" />
-                        ) : (
-                          <MessageSquare className="w-4 h-4 text-accent shrink-0" />
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{cap.chat_title}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {cap.source} · {formatDistanceToNow(new Date(cap.created_at), { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="secondary" className="shrink-0 gap-1" onClick={() => promoteCapture(cap)}>
-                        <ArrowRight className="w-3.5 h-3.5" /> Promote
-                      </Button>
-                    </div>
-                    {cap.summary && (
-                      <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{cap.summary}</p>
-                    )}
-                  </CardContent>
-                </Card>
+                <CaptureCard key={cap.id} cap={cap} onPromote={promoteCapture} />
               ))}
             </div>
           )}
@@ -232,5 +213,59 @@ export default function Capture() {
         </Dialog>
       </div>
     </Layout>
+  );
+}
+
+function CaptureCard({ cap, onPromote }: { cap: DbCapture; onPromote: (cap: DbCapture) => void }) {
+  const [reconstructionOpen, setReconstructionOpen] = useState(false);
+  const hasSnapshot = cap.executive_snapshot && cap.executive_snapshot.trim().length > 0;
+  const hasReconstruction = cap.chosen_direction && cap.chosen_direction.trim().length > 0;
+
+  return (
+    <Card className="card-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            {cap.source === 'chatgpt' ? (
+              <Bot className="w-4 h-4 text-primary shrink-0" />
+            ) : (
+              <MessageSquare className="w-4 h-4 text-accent shrink-0" />
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{cap.chat_title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {cap.source} · {formatDistanceToNow(new Date(cap.created_at), { addSuffix: true })}
+              </p>
+            </div>
+          </div>
+          <Button size="sm" variant="secondary" className="shrink-0 gap-1" onClick={() => onPromote(cap)}>
+            <ArrowRight className="w-3.5 h-3.5" /> Promote
+          </Button>
+        </div>
+
+        {/* Executive Snapshot — always expanded */}
+        {hasSnapshot ? (
+          <div className="mt-3">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Executive Snapshot</h4>
+            <pre className="text-xs bg-background rounded-md p-2.5 whitespace-pre-wrap font-sans border">{cap.executive_snapshot}</pre>
+          </div>
+        ) : cap.summary ? (
+          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{cap.summary}</p>
+        ) : null}
+
+        {/* Full Memory Reconstruction — collapsible */}
+        {hasReconstruction && (
+          <Collapsible open={reconstructionOpen} onOpenChange={setReconstructionOpen} className="mt-2">
+            <CollapsibleTrigger className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+              {reconstructionOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              Full Memory Reconstruction
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <pre className="text-xs bg-background rounded-md p-2.5 whitespace-pre-wrap font-sans border mt-1.5 max-h-60 overflow-y-auto">{cap.chosen_direction}</pre>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+      </CardContent>
+    </Card>
   );
 }

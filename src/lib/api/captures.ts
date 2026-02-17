@@ -22,6 +22,7 @@ export async function fetchCaptures(): Promise<DbCapture[]> {
       : [],
     chosen_direction: row.chosen_direction,
     next_action: row.next_action,
+    executive_snapshot: row.executive_snapshot || row.summary || "",
     resolved_to_project_id: row.resolved_to_project_id,
     created_at: row.created_at,
   }));

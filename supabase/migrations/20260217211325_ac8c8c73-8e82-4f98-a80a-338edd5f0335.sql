@@ -1,0 +1,1 @@
+ALTER TABLE public.captures ADD COLUMN executive_snapshot text;
