@@ -24,11 +24,25 @@ export interface CpConfig {
 
 const STORAGE_KEY = 'cp_config_v1';
 
+/** Strip any path after the base Supabase domain (e.g. /functions/v1/...) */
+export function sanitizeSupabaseUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return url.replace(/\/+$/, '');
+  }
+}
+
 export function getConfig(): CpConfig | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CpConfig;
+    // Auto-migrate: sanitize stored URL
+    if (parsed?.supabase?.url) {
+      parsed.supabase.url = sanitizeSupabaseUrl(parsed.supabase.url);
+    }
     if (!isValidConfig(parsed)) return null;
     return parsed;
   } catch {
@@ -37,6 +51,9 @@ export function getConfig(): CpConfig | null {
 }
 
 export function setConfig(config: CpConfig): void {
+  if (config.supabase?.url) {
+    config.supabase.url = sanitizeSupabaseUrl(config.supabase.url);
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 }
 

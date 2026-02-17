@@ -97,17 +97,21 @@ export default function SetupWizardModal({ open, onComplete, initialConfig, star
     }
   }, [supabaseUrl, supabaseKey]);
 
-  const buildConfig = (): CpConfig => ({
-    supabase: { url: supabaseUrl, anonKey: supabaseKey },
-    ai: {
-      primaryProvider: effectivePrimary,
-      providers: {
-        ...(providers.openai.enabled && providers.openai.apiKey ? { openai: { apiKey: providers.openai.apiKey } } : {}),
-        ...(providers.anthropic.enabled && providers.anthropic.apiKey ? { anthropic: { apiKey: providers.anthropic.apiKey } } : {}),
-        ...(providers.google.enabled && providers.google.apiKey ? { google: { apiKey: providers.google.apiKey } } : {}),
+  const buildConfig = (): CpConfig => {
+    // Import is already at top; sanitize here for safety
+    const cleanUrl = supabaseUrl.replace(/\/functions.*$/, '').replace(/\/+$/, '');
+    return {
+      supabase: { url: cleanUrl, anonKey: supabaseKey },
+      ai: {
+        primaryProvider: effectivePrimary,
+        providers: {
+          ...(providers.openai.enabled && providers.openai.apiKey ? { openai: { apiKey: providers.openai.apiKey } } : {}),
+          ...(providers.anthropic.enabled && providers.anthropic.apiKey ? { anthropic: { apiKey: providers.anthropic.apiKey } } : {}),
+          ...(providers.google.enabled && providers.google.apiKey ? { google: { apiKey: providers.google.apiKey } } : {}),
+        },
       },
-    },
-  });
+    };
+  };
 
   const handleSave = () => {
     const config = buildConfig();
