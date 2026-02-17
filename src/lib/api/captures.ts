@@ -17,8 +17,13 @@ export async function fetchCaptures(): Promise<DbCapture[]> {
     raw_transcript: row.raw_transcript,
     summary: row.summary,
     objective: row.objective,
-    alternatives: Array.isArray(row.alternatives)
-      ? row.alternatives
+    strategic_forks: Array.isArray(row.strategic_forks)
+      ? row.strategic_forks
+      : Array.isArray(row.alternatives)
+        ? row.alternatives
+        : [],
+    deferred_decisions: Array.isArray(row.deferred_decisions)
+      ? row.deferred_decisions
       : [],
     chosen_direction: row.chosen_direction,
     next_action: row.next_action,

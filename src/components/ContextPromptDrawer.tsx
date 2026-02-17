@@ -28,7 +28,8 @@ interface ContextPromptDrawerProps {
 const TOGGLE_ITEMS: { key: keyof InjectPromptOptions; label: string; countFn?: (p: Project) => number }[] = [
   { key: 'includeObjective', label: 'Objective' },
   { key: 'includeDirection', label: 'Chosen Direction' },
-  { key: 'includeAlternatives', label: 'Alternatives', countFn: (p) => p.alternatives.length },
+  { key: 'includeStrategicForks', label: 'Strategic Forks', countFn: (p) => p.strategicForks.length },
+  { key: 'includeDeferredDecisions', label: 'Deferred Decisions', countFn: (p) => p.deferredDecisions.length },
   { key: 'includeNextAction', label: 'Next Action' },
   { key: 'includeActivity', label: 'Recent Activity', countFn: (p) => Math.min(p.activityLog.length, 3) },
   { key: 'includeStatus', label: 'Current Status' },
@@ -94,7 +95,7 @@ export function ContextPromptDrawer({ project, open, onClose }: ContextPromptDra
             </div>
           </div>
 
-          {/* Compiled prompt — single unified textarea */}
+          {/* Compiled prompt */}
           <div>
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Raw Prompt</h3>
             <textarea

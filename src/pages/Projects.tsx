@@ -12,7 +12,7 @@ const filters: { key: ProjectFilter; label: string }[] = [
   { key: 'active', label: 'Active' },
   { key: 'dormant', label: 'Dormant' },
   { key: 'unsent_drafts', label: 'Unsent Drafts' },
-  { key: 'unexplored_alternatives', label: 'Unexplored' },
+  { key: 'open_forks', label: 'Open Forks' },
 ];
 
 export default function Projects() {
@@ -36,8 +36,8 @@ export default function Projects() {
         return now - new Date(p.lastActiveAt).getTime() >= fourteenDays;
       case 'unsent_drafts':
         return p.drafts.some((d) => d.status !== 'Sent');
-      case 'unexplored_alternatives':
-        return p.alternatives.length > 0 && !p.chosenDirection;
+      case 'open_forks':
+        return p.strategicForks.length > 0 && !p.chosenDirection;
       default:
         return true;
     }

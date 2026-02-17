@@ -20,7 +20,9 @@ export interface Project {
   title: string;
   objective: string;
   chosenDirection: string;
-  alternatives: string[];
+  strategicForks: string[];
+  deferredDecisions: string[];
+  executiveSnapshot?: string;
   drafts: Draft[];
   nextAction: string;
   lastActiveAt: string;
@@ -36,7 +38,7 @@ export interface CaptureEvent {
   resolvedToProjectId?: string;
 }
 
-export type ProjectFilter = 'all' | 'active' | 'dormant' | 'unsent_drafts' | 'unexplored_alternatives';
+export type ProjectFilter = 'all' | 'active' | 'dormant' | 'unsent_drafts' | 'open_forks';
 export type ViewMode = 'list' | 'grid';
 
 export interface DbCapture {
@@ -46,7 +48,8 @@ export interface DbCapture {
   raw_transcript: string;
   summary: string;
   objective: string;
-  alternatives: string[];
+  strategic_forks: string[];
+  deferred_decisions: string[];
   chosen_direction: string;
   next_action: string;
   executive_snapshot: string;
