@@ -10,23 +10,24 @@ const corsHeaders = {
 
 const INSTRUCTION_STRUCTURED =
   "You are reconstructing structured memory from a working session.\n" +
-  "Your goal is high-fidelity memory reconstruction, not compression.\n\n" +
+  "Your goal is maximum memory durability and reasoning preservation, not compression.\n\n" +
+  "You must produce TWO sections in your JSON output.\n\n" +
   "Extract EXACTLY these fields as JSON:\n" +
-  '- "summary": 2-4 sentence overview covering objective, core reasoning, and key constraints\n' +
+  '- "summary": The EXECUTIVE SNAPSHOT — 6-10 concise bullet points (as a single string with newlines) summarizing: core objective, main decisions, major forks, deferred items, immediate next action (if any). Must be concise and scannable. Must not introduce new ideas.\n' +
   '- "objective": What the user was trying to accomplish (1-2 sentences)\n' +
-  '- "alternatives": Array of up to 5 strategic forks — competing paths discussed (strings). Preserve important nuance and tradeoffs. If a tradeoff was discussed (e.g. "create new vs update"), explicitly list both sides. Do NOT abstract or generalize specific design forks. If none, empty array.\n' +
-  '- "chosen_direction": Core reasoning for the chosen path plus key constraints (technical, cost, scope, token, UX limits). Include deferred decisions verbatim — if the user says to "prioritize revisiting X later", preserve that phrasing exactly. Include open questions. If none, empty string.\n' +
-  '- "next_action": Immediate next action ONLY if clearly actionable and agreed. If no clear immediate action exists, state: "No immediate execution step defined."\n\n' +
+  '- "alternatives": Array of up to 5 strategic forks — competing paths discussed (strings). If a tradeoff contains "vs", "or", or comparison language, promote it explicitly. Preserve important nuance and tradeoffs. Do NOT collapse forks into narrative paragraphs. If none, empty array.\n' +
+  '- "chosen_direction": The CANONICAL RECONSTRUCTION — a thorough reconstruction covering: Core Reasoning, Key Constraints, Strategic Forks detail, Deferred Decisions (using original wording), and Open Questions. Be thorough. Preserve reasoning depth. Avoid fluff and repetition.\n' +
+  '- "next_action": Immediate next action ONLY if clearly actionable and agreed. If no clear immediate action exists, state: "No immediate execution step defined."\n' +
+  '- "executive_snapshot": Same content as summary field (the 6-10 bullet points). This is stored separately for structured access.\n\n' +
   "Rules:\n" +
   "- Preserve explicit prioritization statements verbatim.\n" +
-  "- Do NOT overly compress reasoning.\n" +
-  "- Preserve important nuance and tradeoffs.\n" +
-  "- Do NOT abstract or generalize specific design forks.\n" +
-  "- Do NOT convert deferred exploration or postponed revisiting into execution steps.\n" +
-  "- If revisiting was intentionally postponed, it must appear as a deferred decision, not a next action.\n" +
+  "- If the user says to prioritize revisiting something later, elevate it under Deferred Decisions using original wording.\n" +
+  "- If a tradeoff contains 'vs', 'or', or comparison language, promote it explicitly to Strategic Forks.\n" +
+  "- Do NOT collapse forks into narrative paragraphs.\n" +
+  "- Do NOT convert postponed exploration into execution steps.\n" +
   "- Do NOT invent new ideas.\n" +
-  "- Keep output under ~700 words.\n" +
-  "- Clarity over brevity.\n";
+  "- Be thorough. Preserve reasoning depth.\n" +
+  "- Avoid fluff. Avoid repetition.\n";
 
 const INSTRUCTION_DRAFT =
   "Extract EXACTLY these fields as JSON:\n" +
@@ -254,6 +255,7 @@ Deno.serve(async (req) => {
         alternatives,
         chosen_direction: parsed.chosen_direction || "",
         next_action: parsed.next_action || "",
+        executive_snapshot: parsed.executive_snapshot || parsed.summary || "",
         status: "active",
       })
       .select()

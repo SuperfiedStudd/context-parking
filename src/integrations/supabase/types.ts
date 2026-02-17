@@ -20,6 +20,7 @@ export type Database = {
           chat_title: string | null
           chosen_direction: string | null
           created_at: string
+          executive_snapshot: string | null
           id: string
           next_action: string | null
           objective: string | null
@@ -34,6 +35,7 @@ export type Database = {
           chat_title?: string | null
           chosen_direction?: string | null
           created_at?: string
+          executive_snapshot?: string | null
           id?: string
           next_action?: string | null
           objective?: string | null
@@ -48,6 +50,7 @@ export type Database = {
           chat_title?: string | null
           chosen_direction?: string | null
           created_at?: string
+          executive_snapshot?: string | null
           id?: string
           next_action?: string | null
           objective?: string | null
