@@ -40,6 +40,7 @@ async function callOpenAI(text: string, apiKey: string, model: string) {
       temperature: 0.2,
     }),
   });
+  console.log("OpenAI response status:", res.status);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err?.error?.message || `OpenAI error ${res.status}`);
@@ -69,6 +70,7 @@ async function callAnthropic(text: string, apiKey: string, model: string) {
       messages: [{ role: "user", content: text }],
     }),
   });
+  console.log("Anthropic response status:", res.status);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err?.error?.message || `Anthropic error ${res.status}`);
@@ -95,6 +97,7 @@ async function callGoogle(text: string, apiKey: string, model: string) {
       generationConfig: { temperature: 0.2 },
     }),
   });
+  console.log("Google AI response status:", res.status);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err?.error?.message || `Google AI error ${res.status}`);
@@ -133,6 +136,11 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { source, chat_title, transcript, provider, api_key, model } = body;
 
+    // Deterministic logging
+    console.log("Provider:", provider);
+    console.log("Model:", model || "will use default");
+    console.log("API key length:", api_key?.length ?? 0);
+
     // Validate required fields
     if (!transcript) {
       return new Response(JSON.stringify({ error: "Missing field: transcript" }), {
@@ -159,6 +167,8 @@ Deno.serve(async (req) => {
     const usedModel = model || DEFAULT_MODELS[provider as Provider];
     const start = Date.now();
 
+    console.log("Calling provider:", provider, "model:", usedModel);
+
     // Call AI provider directly with user's BYOK key
     const aiResult = await PROVIDER_FN[provider as Provider](
       `Chat title: ${chat_title || "Untitled"}\n\nTranscript:\n${transcript}`,
@@ -167,6 +177,7 @@ Deno.serve(async (req) => {
     );
 
     const latency_ms = Date.now() - start;
+    console.log("AI call succeeded in", latency_ms, "ms");
 
     // Parse structured JSON from AI response
     let parsed;
@@ -174,7 +185,7 @@ Deno.serve(async (req) => {
       const cleaned = aiResult.raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       parsed = JSON.parse(cleaned);
     } catch {
-      console.error("Failed to parse AI response");
+      console.error("Failed to parse AI response:", aiResult.raw.substring(0, 200));
       parsed = { summary: "", objective: "", alternatives: [], chosen_direction: "", next_action: "" };
     }
 
@@ -197,6 +208,7 @@ Deno.serve(async (req) => {
         alternatives,
         chosen_direction: parsed.chosen_direction || "",
         next_action: parsed.next_action || "",
+        status: "active",
       })
       .select()
       .single();
@@ -205,6 +217,8 @@ Deno.serve(async (req) => {
       console.error("DB insert error:", error);
       throw new Error(error.message);
     }
+
+    console.log("Capture saved:", data.id);
 
     return new Response(
       JSON.stringify({ ...data, provider, model: usedModel, usage: aiResult.usage, latency_ms }),
