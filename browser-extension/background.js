@@ -9,9 +9,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (!config.supabase?.url || !provider || !apiKey) return;
 
+    // Strip any path after domain (e.g. /functions/v1/...)
+    let baseUrl;
+    try {
+      const u = new URL(config.supabase.url);
+      baseUrl = `${u.protocol}//${u.host}`;
+    } catch {
+      baseUrl = config.supabase.url.replace(/\/functions.*$/, "").replace(/\/+$/, "");
+    }
+
     chrome.storage.local.set({
       cpConfigSynced: true,
-      cpSupabaseUrl: config.supabase.url.replace(/\/+$/, ""),
+      cpSupabaseUrl: baseUrl,
       cpProvider: provider,
       cpApiKey: apiKey,
     });
