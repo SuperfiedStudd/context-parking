@@ -1,8 +1,12 @@
-// config-sync.js — Content script injected into the Context Parking web app.
-// Reads cp_config_v1 from localStorage and syncs it to chrome.storage.local
-// so the extension popup can access it without any user configuration.
+// config-sync.js — Content script injected on all pages.
+// Detects Context Parking web app via a DOM marker and syncs config
+// to chrome.storage.local via chrome.runtime messaging.
 
-function syncConfig() {
+function trySync() {
+  // Only activate if this page is the Context Parking web app
+  const marker = document.querySelector('meta[name="context-parking-app"]');
+  if (!marker) return;
+
   try {
     const raw = localStorage.getItem("cp_config_v1");
     if (!raw) return;
@@ -10,29 +14,22 @@ function syncConfig() {
     const config = JSON.parse(raw);
     if (!config || !config.supabase?.url || !config.ai?.primaryProvider) return;
 
-    // Extract only what the extension needs — never log keys
-    const provider = config.ai.primaryProvider;
-    const apiKey = config.ai.providers?.[provider]?.apiKey;
-
-    if (!apiKey) return;
-
-    chrome.storage.local.set({
-      cpConfigSynced: true,
-      cpSupabaseUrl: config.supabase.url,
-      cpProvider: provider,
-      cpApiKey: apiKey,
+    // Send config to background/popup via runtime message
+    chrome.runtime.sendMessage({
+      type: "SYNC_CONFIG",
+      config: config,
     });
   } catch {
     // Silently fail — config not ready yet
   }
 }
 
-// Sync on load
-syncConfig();
+// Sync on load (after DOM is ready)
+trySync();
 
 // Re-sync when localStorage changes (user updates config in Settings)
 window.addEventListener("storage", (e) => {
   if (e.key === "cp_config_v1") {
-    syncConfig();
+    trySync();
   }
 });
