@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { useStore } from '@/store/useStore';
@@ -9,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Project, DbCapture } from '@/types';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCaptures } from '@/lib/api/captures';
+import { fetchCaptures, markCapturePromoted } from '@/lib/api/captures';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ function parseCapture(instruction: string, transcript: string) {
 
 export default function Capture() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { projects, addProject, updateProject, addCapture, addActivityEvent } = useStore();
   const [chatId, setChatId] = useState('');
   const [transcript, setTranscript] = useState('');
@@ -108,7 +110,7 @@ export default function Capture() {
     navigate(`/projects/${existingProject.id}`);
   };
 
-  const promoteCapture = (cap: DbCapture) => {
+  const promoteCapture = async (cap: DbCapture) => {
     const newProject: Project = {
       id: generateId(),
       title: cap.chat_title || 'Untitled Capture',
@@ -121,6 +123,12 @@ export default function Capture() {
       activityLog: [{ id: generateId(), type: 'created', description: `Promoted from ${cap.source} capture`, timestamp: new Date().toISOString() }],
     };
     addProject(newProject);
+    try {
+      await markCapturePromoted(cap.id);
+      queryClient.invalidateQueries({ queryKey: ['db-captures'] });
+    } catch (e) {
+      console.error('Failed to mark capture promoted:', e);
+    }
     toast.success('Capture promoted to project');
     navigate(`/projects/${newProject.id}`);
   };

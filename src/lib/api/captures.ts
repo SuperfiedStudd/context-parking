@@ -2,9 +2,10 @@ import { supabase } from "@/integrations/supabase/client";
 import type { DbCapture } from "@/types";
 
 export async function fetchCaptures(): Promise<DbCapture[]> {
-  const { data, error } = await supabase
-    .from("captures" as any)
+  const { data, error } = await (supabase as any)
+    .from("captures")
     .select("*")
+    .eq("status", "active")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -24,6 +25,18 @@ export async function fetchCaptures(): Promise<DbCapture[]> {
     resolved_to_project_id: row.resolved_to_project_id,
     created_at: row.created_at,
   }));
+}
+
+export async function markCapturePromoted(captureId: string): Promise<void> {
+  const { error } = await (supabase
+    .from("captures")
+    .update({ status: "promoted" } as any)
+    .eq("id", captureId) as any);
+
+  if (error) {
+    console.error("Failed to mark capture as promoted:", error);
+    throw error;
+  }
 }
 
 export async function markCaptureResolved(

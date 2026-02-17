@@ -26,6 +26,7 @@ export type Database = {
           raw_transcript: string | null
           resolved_to_project_id: string | null
           source: string | null
+          status: string
           summary: string | null
         }
         Insert: {
@@ -39,6 +40,7 @@ export type Database = {
           raw_transcript?: string | null
           resolved_to_project_id?: string | null
           source?: string | null
+          status?: string
           summary?: string | null
         }
         Update: {
@@ -52,6 +54,7 @@ export type Database = {
           raw_transcript?: string | null
           resolved_to_project_id?: string | null
           source?: string | null
+          status?: string
           summary?: string | null
         }
         Relationships: []
