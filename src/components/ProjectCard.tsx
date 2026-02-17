@@ -14,7 +14,7 @@ export function ProjectCard({ project, viewMode }: ProjectCardProps) {
   const navigate = useNavigate();
   const readyDrafts = project.drafts.filter((d) => d.status === 'Ready').length;
   const draftCount = project.drafts.length;
-  const forkCount = project.strategicForks.length;
+  const forkCount = (project.strategicForks || []).length;
   const hasReminder = !!project.reminderAt;
 
   if (viewMode === 'grid') {
