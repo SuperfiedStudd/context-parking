@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     const { source, chat_title, transcript } = await req.json();
 
     // Validate transcript length
-    if (transcript && transcript.length > 100_000) {
+    if (transcript && transcript.length > 500_000) {
       return new Response(
         JSON.stringify({ error: "Transcript too large" }),
         {
