@@ -14,13 +14,16 @@ const INSTRUCTION_STRUCTURED =
   "Extract EXACTLY these fields as JSON:\n" +
   '- "summary": 2-4 sentence overview covering objective, core reasoning, and key constraints\n' +
   '- "objective": What the user was trying to accomplish (1-2 sentences)\n' +
-  '- "alternatives": Array of up to 5 strategic forks — competing paths discussed (strings). Preserve important nuance and tradeoffs. If none, empty array.\n' +
-  '- "chosen_direction": Core reasoning for the chosen path plus key constraints (technical, cost, scope, token, UX limits). Include deferred decisions and open questions. If none, empty string.\n' +
+  '- "alternatives": Array of up to 5 strategic forks — competing paths discussed (strings). Preserve important nuance and tradeoffs. If a tradeoff was discussed (e.g. "create new vs update"), explicitly list both sides. Do NOT abstract or generalize specific design forks. If none, empty array.\n' +
+  '- "chosen_direction": Core reasoning for the chosen path plus key constraints (technical, cost, scope, token, UX limits). Include deferred decisions verbatim — if the user says to "prioritize revisiting X later", preserve that phrasing exactly. Include open questions. If none, empty string.\n' +
   '- "next_action": Immediate next action ONLY if clearly actionable and agreed. If no clear immediate action exists, state: "No immediate execution step defined."\n\n' +
   "Rules:\n" +
+  "- Preserve explicit prioritization statements verbatim.\n" +
   "- Do NOT overly compress reasoning.\n" +
   "- Preserve important nuance and tradeoffs.\n" +
-  "- Do NOT convert deferred exploration into execution steps.\n" +
+  "- Do NOT abstract or generalize specific design forks.\n" +
+  "- Do NOT convert deferred exploration or postponed revisiting into execution steps.\n" +
+  "- If revisiting was intentionally postponed, it must appear as a deferred decision, not a next action.\n" +
   "- Do NOT invent new ideas.\n" +
   "- Keep output under ~700 words.\n" +
   "- Clarity over brevity.\n";
