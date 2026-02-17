@@ -15,117 +15,6 @@ const SYSTEM_PROMPT =
   '- "next_action": Suggested next step (1 sentence). If none, empty string.\n\n' +
   "Return ONLY valid JSON, no markdown, no explanation.";
 
-interface RequestBody {
-  source?: string;
-  chat_title?: string;
-  transcript: string;
-  provider: "openai" | "anthropic" | "google";
-  api_key: string;
-  model?: string;
-}
-
-async function callOpenAI(text: string, apiKey: string, model: string) {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: text },
-      ],
-      temperature: 0.2,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `OpenAI error ${res.status}`);
-  }
-  const data = await res.json();
-  return {
-    raw: data.choices?.[0]?.message?.content ?? "{}",
-    model,
-    usage: {
-      input_tokens: data.usage?.prompt_tokens,
-      output_tokens: data.usage?.completion_tokens,
-    },
-  };
-}
-
-async function callAnthropic(text: string, apiKey: string, model: string) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: text }],
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Anthropic error ${res.status}`);
-  }
-  const data = await res.json();
-  const content = data.content?.find((b: any) => b.type === "text");
-  return {
-    raw: content?.text ?? "{}",
-    model,
-    usage: {
-      input_tokens: data.usage?.input_tokens,
-      output_tokens: data.usage?.output_tokens,
-    },
-  };
-}
-
-async function callGoogle(text: string, apiKey: string, model: string) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{ parts: [{ text }] }],
-      generationConfig: { temperature: 0.2 },
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Google AI error ${res.status}`);
-  }
-  const data = await res.json();
-  const part = data.candidates?.[0]?.content?.parts?.[0];
-  const meta = data.usageMetadata;
-  return {
-    raw: part?.text ?? "{}",
-    model,
-    usage: {
-      input_tokens: meta?.promptTokenCount,
-      output_tokens: meta?.candidatesTokenCount,
-    },
-  };
-}
-
-const PROVIDERS: Record<string, (text: string, key: string, model: string) => ReturnType<typeof callOpenAI>> = {
-  openai: callOpenAI,
-  anthropic: callAnthropic,
-  google: callGoogle,
-};
-
-const DEFAULT_MODELS: Record<string, string> = {
-  openai: "gpt-4o-mini",
-  anthropic: "claude-3-5-sonnet-latest",
-  google: "gemini-2.0-flash",
-};
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -139,23 +28,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body: RequestBody = await req.json();
-    const { source, chat_title, transcript, provider, api_key, model } = body;
+    const { source, chat_title, transcript } = await req.json();
 
     if (!transcript) {
       return new Response(JSON.stringify({ error: "Missing field: transcript" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (!provider || !PROVIDERS[provider]) {
-      return new Response(
-        JSON.stringify({ error: `Unsupported provider: ${provider}. Use openai, anthropic, or google.` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    if (!api_key) {
-      return new Response(JSON.stringify({ error: "Missing field: api_key" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -167,21 +43,41 @@ Deno.serve(async (req) => {
       });
     }
 
-    const usedModel = model || DEFAULT_MODELS[provider];
     const start = Date.now();
 
-    const aiResult = await PROVIDERS[provider](
-      `Chat title: ${chat_title || "Untitled"}\n\nTranscript:\n${transcript}`,
-      api_key,
-      usedModel
+    // Call AI Gateway (server-side, uses LOVABLE_API_KEY)
+    const aiRes = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: `Chat title: ${chat_title || "Untitled"}\n\nTranscript:\n${transcript}` },
+          ],
+          temperature: 0.2,
+        }),
+      }
     );
 
+    if (!aiRes.ok) {
+      const errText = await aiRes.text();
+      console.error("AI Gateway error:", errText);
+      throw new Error(`AI Gateway returned ${aiRes.status}`);
+    }
+
+    const aiData = await aiRes.json();
+    const rawContent = aiData.choices?.[0]?.message?.content || "{}";
     const latency_ms = Date.now() - start;
 
-    // Parse structured JSON from AI response
     let parsed;
     try {
-      const cleaned = aiResult.raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const cleaned = rawContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       parsed = JSON.parse(cleaned);
     } catch {
       console.error("Failed to parse AI response");
@@ -190,7 +86,6 @@ Deno.serve(async (req) => {
 
     const alternatives = Array.isArray(parsed.alternatives) ? parsed.alternatives.slice(0, 3) : [];
 
-    // Atomic DB insert via service role
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -217,13 +112,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({
-        ...data,
-        provider,
-        model: usedModel,
-        usage: aiResult.usage,
-        latency_ms,
-      }),
+      JSON.stringify({ ...data, latency_ms }),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

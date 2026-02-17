@@ -1,25 +1,17 @@
 const urlInput = document.getElementById("url");
-const providerSelect = document.getElementById("provider");
-const apikeyInput = document.getElementById("apikey");
 const saveBtn = document.getElementById("save");
 const captureBtn = document.getElementById("capture");
 const statusEl = document.getElementById("status");
 
 // Load saved settings
-chrome.storage.local.get(["cpSupabaseUrl", "cpProvider", "cpApiKey"], (data) => {
+chrome.storage.local.get(["cpSupabaseUrl"], (data) => {
   if (data.cpSupabaseUrl) urlInput.value = data.cpSupabaseUrl;
-  if (data.cpProvider) providerSelect.value = data.cpProvider;
-  if (data.cpApiKey) apikeyInput.value = data.cpApiKey;
 });
 
 // Save settings
 saveBtn.addEventListener("click", () => {
   chrome.storage.local.set(
-    {
-      cpSupabaseUrl: urlInput.value.trim(),
-      cpProvider: providerSelect.value,
-      cpApiKey: apikeyInput.value.trim(),
-    },
+    { cpSupabaseUrl: urlInput.value.trim() },
     () => setStatus("Settings saved", "success")
   );
 });
@@ -27,11 +19,9 @@ saveBtn.addEventListener("click", () => {
 // Capture
 captureBtn.addEventListener("click", async () => {
   const supabaseUrl = urlInput.value.trim();
-  const provider = providerSelect.value;
-  const apiKey = apikeyInput.value.trim();
 
-  if (!supabaseUrl || !apiKey) {
-    setStatus("Configure Supabase URL and API key first", "error");
+  if (!supabaseUrl) {
+    setStatus("Configure Supabase URL first", "error");
     return;
   }
 
@@ -70,8 +60,6 @@ captureBtn.addEventListener("click", async () => {
             source: response.source,
             chat_title: response.chatTitle,
             transcript: response.transcript,
-            provider: provider,
-            api_key: apiKey,
           }),
         });
 
