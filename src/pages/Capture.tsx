@@ -43,7 +43,7 @@ function parseCapture(instruction: string, transcript: string) {
   }
   const altLines = transcript.match(/^\d+\.\s+.+$/gm);
   if (altLines) {
-    result.alternatives = altLines.slice(0, 3).map((l) => l.replace(/^\d+\.\s+/, '').trim());
+    result.strategicForks = altLines.slice(0, 3).map((l) => l.replace(/^\d+\.\s+/, '').trim());
   }
   return result;
 }
@@ -89,7 +89,8 @@ export default function Capture() {
       title: chatId,
       objective: instruction,
       chosenDirection: parsed.chosenDirection || '',
-      alternatives: parsed.alternatives || [],
+      strategicForks: parsed.strategicForks || [],
+      deferredDecisions: [],
       drafts: [],
       nextAction: '',
       lastActiveAt: new Date().toISOString(),
@@ -106,7 +107,7 @@ export default function Capture() {
     if (!existingProject || !preview) return;
     const updates: Partial<Project> = {};
     if (preview.chosenDirection) updates.chosenDirection = preview.chosenDirection;
-    if (preview.alternatives) updates.alternatives = preview.alternatives;
+    if (preview.strategicForks) updates.strategicForks = preview.strategicForks;
     if (preview.reminderAt) updates.reminderAt = preview.reminderAt;
     updateProject(existingProject.id, updates);
     addActivityEvent(existingProject.id, { type: 'updated', description: 'Updated from capture' });
@@ -121,7 +122,9 @@ export default function Capture() {
       title: cap.chat_title || 'Untitled Capture',
       objective: cap.objective || '',
       chosenDirection: cap.chosen_direction || '',
-      alternatives: cap.alternatives || [],
+      strategicForks: cap.strategic_forks || [],
+      deferredDecisions: cap.deferred_decisions || [],
+      executiveSnapshot: cap.executive_snapshot || '',
       drafts: [],
       nextAction: cap.next_action || '',
       lastActiveAt: new Date().toISOString(),
@@ -185,10 +188,10 @@ export default function Capture() {
             <div className="space-y-3 text-sm">
               <div><span className="font-medium">Chat ID:</span> {chatId}</div>
               {preview?.chosenDirection && <div><span className="font-medium">Chosen Direction:</span> {preview.chosenDirection}</div>}
-              {preview?.alternatives && preview.alternatives.length > 0 && (
+              {preview?.strategicForks && preview.strategicForks.length > 0 && (
                 <div>
-                  <span className="font-medium">Alternatives:</span>
-                  <ul className="list-disc list-inside mt-1">{preview.alternatives.map((a, i) => <li key={i}>{a}</li>)}</ul>
+                  <span className="font-medium">Strategic Forks:</span>
+                  <ul className="list-disc list-inside mt-1">{preview.strategicForks.map((f, i) => <li key={i}>{f}</li>)}</ul>
                 </div>
               )}
               {preview?.reminderAt && <div><span className="font-medium">Reminder:</span> {new Date(preview.reminderAt).toLocaleDateString()}</div>}

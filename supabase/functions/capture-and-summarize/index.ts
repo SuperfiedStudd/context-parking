@@ -15,7 +15,8 @@ const INSTRUCTION_STRUCTURED =
   "Extract EXACTLY these fields as JSON:\n" +
   '- "summary": The EXECUTIVE SNAPSHOT — 6-10 concise bullet points (as a single string with newlines) summarizing: core objective, main decisions, major forks, deferred items, immediate next action (if any). Must be concise and scannable. Must not introduce new ideas.\n' +
   '- "objective": What the user was trying to accomplish (1-2 sentences)\n' +
-  '- "alternatives": Array of up to 5 strategic forks — competing paths discussed (strings). If a tradeoff contains "vs", "or", or comparison language, promote it explicitly. Preserve important nuance and tradeoffs. Do NOT collapse forks into narrative paragraphs. If none, empty array.\n' +
+  '- "strategic_forks": Array of up to 5 strategic forks — active decision branches discussed (strings). Each fork must list both sides clearly. If a tradeoff contains "vs", "or", or comparison language, promote it explicitly. Do NOT collapse forks into narrative paragraphs. If none, empty array.\n' +
+  '- "deferred_decisions": Array of explicitly postponed items (strings). If the user says to prioritize revisiting something later, preserve their wording verbatim. Do NOT mix with next action. If none, empty array.\n' +
   '- "chosen_direction": The CANONICAL RECONSTRUCTION — a thorough reconstruction covering: Core Reasoning, Key Constraints, Strategic Forks detail, Deferred Decisions (using original wording), and Open Questions. Be thorough. Preserve reasoning depth. Avoid fluff and repetition.\n' +
   '- "next_action": Immediate next action ONLY if clearly actionable and agreed. If no clear immediate action exists, state: "No immediate execution step defined."\n' +
   '- "executive_snapshot": Same content as summary field (the 6-10 bullet points). This is stored separately for structured access.\n\n' +
@@ -33,7 +34,8 @@ const INSTRUCTION_DRAFT =
   "Extract EXACTLY these fields as JSON:\n" +
   '- "summary": 1-2 sentence description of the draft purpose and audience\n' +
   '- "objective": What the draft is intended to communicate (1 sentence)\n' +
-  '- "alternatives": Empty array (not applicable for drafts)\n' +
+  '- "strategic_forks": Empty array (not applicable for drafts)\n' +
+  '- "deferred_decisions": Empty array (not applicable for drafts)\n' +
   '- "chosen_direction": The latest draft version text, preserving tone and structure. Remove meta discussion about the draft.\n' +
   '- "next_action": Any remaining edits or send instructions mentioned (1 sentence). If none, empty string.\n';
 
@@ -233,10 +235,11 @@ Deno.serve(async (req) => {
       parsed = JSON.parse(cleaned);
     } catch {
       console.error("Failed to parse AI response:", aiResult.raw.substring(0, 200));
-      parsed = { summary: "", objective: "", alternatives: [], chosen_direction: "", next_action: "" };
+      parsed = { summary: "", objective: "", strategic_forks: [], deferred_decisions: [], chosen_direction: "", next_action: "" };
     }
 
-    const alternatives = Array.isArray(parsed.alternatives) ? parsed.alternatives.slice(0, 3) : [];
+    const strategicForks = Array.isArray(parsed.strategic_forks) ? parsed.strategic_forks.slice(0, 5) : [];
+    const deferredDecisions = Array.isArray(parsed.deferred_decisions) ? parsed.deferred_decisions.slice(0, 5) : [];
 
     // Atomic DB insert via service role
     const supabase = createClient(
@@ -252,7 +255,9 @@ Deno.serve(async (req) => {
         raw_transcript: transcript,
         summary: parsed.summary || "",
         objective: parsed.objective || "",
-        alternatives,
+        alternatives: strategicForks,
+        strategic_forks: strategicForks,
+        deferred_decisions: deferredDecisions,
         chosen_direction: parsed.chosen_direction || "",
         next_action: parsed.next_action || "",
         executive_snapshot: parsed.executive_snapshot || parsed.summary || "",

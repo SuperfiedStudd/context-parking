@@ -11,10 +11,13 @@ export const seedProjects: Project[] = [
     title: 'Square APM Application Strategy',
     objective: 'Craft a compelling APM application for Square, emphasizing infrastructure scaling experience and product-led growth thinking.',
     chosenDirection: 'Lead with the distributed systems narrative — highlight tracing and observability work from previous roles.',
-    alternatives: [
-      'Focus on developer tooling angle — SDKs, APIs, DX improvements',
-      'Emphasize cross-functional PM experience — bridge eng and business',
-      'Lead with data pipeline expertise — real-time analytics at scale',
+    strategicForks: [
+      'Developer tooling angle (SDKs, APIs, DX) vs Distributed systems narrative',
+      'Cross-functional PM experience vs Technical depth positioning',
+      'Data pipeline expertise vs Observability-first approach',
+    ],
+    deferredDecisions: [
+      'Revisit data pipeline angle after initial application feedback',
     ],
     drafts: [
       {
@@ -36,7 +39,7 @@ export const seedProjects: Project[] = [
     reminderAt: daysFromNow(1),
     activityLog: [
       { id: 'a1', type: 'created', description: 'Project created', timestamp: daysAgo(5) },
-      { id: 'a2', type: 'updated', description: 'Added 3 alternative directions', timestamp: daysAgo(4) },
+      { id: 'a2', type: 'updated', description: 'Added strategic forks', timestamp: daysAgo(4) },
       { id: 'a3', type: 'draft_status_changed', description: 'Cover letter marked as Ready', timestamp: daysAgo(1) },
       { id: 'a4', type: 'reminder_set', description: 'Reminder set for tomorrow', timestamp: hoursAgo(3) },
     ],
@@ -46,10 +49,11 @@ export const seedProjects: Project[] = [
     title: 'AI Evals Orchestration Platform',
     objective: 'Design and spec an evaluation orchestration layer that standardizes how teams run, compare, and track LLM evals across environments.',
     chosenDirection: 'Build a lightweight orchestrator that wraps existing eval frameworks (Braintrust, Evalica) with a unified config and reporting layer.',
-    alternatives: [
-      'Full custom eval framework — own the entire pipeline end-to-end',
-      'Plugin architecture — let teams bring their own eval runners',
+    strategicForks: [
+      'Full custom eval framework vs Wrapper/orchestrator approach',
+      'Plugin architecture (teams bring own runners) vs Unified adapter layer',
     ],
+    deferredDecisions: [],
     drafts: [
       {
         id: 'draft-2a',
@@ -71,10 +75,13 @@ export const seedProjects: Project[] = [
     title: 'Context Parking V1 Build Plan',
     objective: 'Ship a polished V1 of Context Parking — the tool for capturing and resuming AI chat context deterministically.',
     chosenDirection: 'Start as a client-side SPA with localStorage, validate the UX, then add backend persistence later.',
-    alternatives: [
-      'Build as a browser extension from day one',
-      'Server-first with real-time sync across devices',
-      'CLI tool that integrates with chat APIs directly',
+    strategicForks: [
+      'Browser extension from day one vs SPA-first approach',
+      'Server-first with real-time sync vs Client-side with later migration',
+      'CLI tool with chat API integration vs Web-based UI',
+    ],
+    deferredDecisions: [
+      'Revisit server-first architecture after validating SPA UX patterns',
     ],
     drafts: [
       {

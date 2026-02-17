@@ -20,6 +20,7 @@ export type Database = {
           chat_title: string | null
           chosen_direction: string | null
           created_at: string
+          deferred_decisions: Json | null
           executive_snapshot: string | null
           id: string
           next_action: string | null
@@ -28,6 +29,7 @@ export type Database = {
           resolved_to_project_id: string | null
           source: string | null
           status: string
+          strategic_forks: Json | null
           summary: string | null
         }
         Insert: {
@@ -35,6 +37,7 @@ export type Database = {
           chat_title?: string | null
           chosen_direction?: string | null
           created_at?: string
+          deferred_decisions?: Json | null
           executive_snapshot?: string | null
           id?: string
           next_action?: string | null
@@ -43,6 +46,7 @@ export type Database = {
           resolved_to_project_id?: string | null
           source?: string | null
           status?: string
+          strategic_forks?: Json | null
           summary?: string | null
         }
         Update: {
@@ -50,6 +54,7 @@ export type Database = {
           chat_title?: string | null
           chosen_direction?: string | null
           created_at?: string
+          deferred_decisions?: Json | null
           executive_snapshot?: string | null
           id?: string
           next_action?: string | null
@@ -58,6 +63,7 @@ export type Database = {
           resolved_to_project_id?: string | null
           source?: string | null
           status?: string
+          strategic_forks?: Json | null
           summary?: string | null
         }
         Relationships: []

@@ -99,6 +99,14 @@ export default function ProjectDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left — Structured State */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Executive Snapshot */}
+          {project.executiveSnapshot && (
+            <div className="bg-card border rounded-lg p-4 card-shadow">
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Executive Snapshot</h3>
+              <pre className="text-sm whitespace-pre-wrap font-sans">{project.executiveSnapshot}</pre>
+            </div>
+          )}
+
           {/* Objective */}
           <div className="bg-card border rounded-lg p-4 card-shadow">
             <div className="flex items-center justify-between mb-2">
@@ -132,15 +140,30 @@ export default function ProjectDetail() {
             <p className="text-sm">{project.chosenDirection || <span className="text-muted-foreground italic">Not set</span>}</p>
           </div>
 
-          {/* Alternatives */}
-          {project.alternatives.length > 0 && (
+          {/* Strategic Forks */}
+          {project.strategicForks.length > 0 && (
             <div className="bg-card border rounded-lg p-4 card-shadow">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Alternatives</h3>
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Strategic Forks</h3>
               <div className="space-y-2">
-                {project.alternatives.map((a, i) => (
+                {project.strategicForks.map((f, i) => (
                   <div key={i} className="flex gap-2 items-start text-sm">
                     <span className="text-muted-foreground font-mono text-xs mt-0.5">{i + 1}.</span>
-                    <span>{a}</span>
+                    <span>{f}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Deferred Decisions */}
+          {project.deferredDecisions.length > 0 && (
+            <div className="bg-card border rounded-lg p-4 card-shadow">
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Deferred Decisions</h3>
+              <div className="space-y-2">
+                {project.deferredDecisions.map((d, i) => (
+                  <div key={i} className="flex gap-2 items-start text-sm">
+                    <span className="text-muted-foreground font-mono text-xs mt-0.5">{i + 1}.</span>
+                    <span>{d}</span>
                   </div>
                 ))}
               </div>
