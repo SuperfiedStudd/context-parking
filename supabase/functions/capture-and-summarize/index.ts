@@ -6,14 +6,55 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT =
-  "You are a structured data extractor. Given a chat transcript, extract EXACTLY these fields as JSON:\n" +
+// --- Instruction templates by capture type ---
+
+const INSTRUCTION_PLANNING =
+  "Extract EXACTLY these fields as JSON:\n" +
   '- "summary": 2-3 sentence overview of the conversation\n' +
   '- "objective": What the user was trying to accomplish (1 sentence)\n' +
-  '- "alternatives": Array of up to 3 approaches/options discussed (strings). If none, empty array.\n' +
+  '- "alternatives": Array of up to 3 approaches/options discussed (strings). Preserve tangents as alternatives unless user intent elevates them. If none, empty array.\n' +
   '- "chosen_direction": Which approach was favored (1 sentence). If none, empty string.\n' +
-  '- "next_action": Suggested next step (1 sentence). If none, empty string.\n\n' +
-  "Return ONLY valid JSON, no markdown, no explanation.";
+  '- "next_action": Suggested next step (1 sentence). If none, empty string.\n';
+
+const INSTRUCTION_DECISION =
+  "Extract EXACTLY these fields as JSON:\n" +
+  '- "summary": 2-3 sentence overview of the final decision reached\n' +
+  '- "objective": What decision was being made (1 sentence)\n' +
+  '- "alternatives": Array of up to 3 rejected options (strings). Clearly mark these as rejected. If none, empty array.\n' +
+  '- "chosen_direction": The confirmed conclusion or decision (1 sentence)\n' +
+  '- "next_action": Immediate next step following the decision (1 sentence). If none, empty string.\n';
+
+const INSTRUCTION_DRAFT =
+  "Extract EXACTLY these fields as JSON:\n" +
+  '- "summary": 1-2 sentence description of the draft purpose and audience\n' +
+  '- "objective": What the draft is intended to communicate (1 sentence)\n' +
+  '- "alternatives": Empty array (not applicable for drafts)\n' +
+  '- "chosen_direction": The latest draft version text, preserving tone and structure. Remove meta discussion about the draft.\n' +
+  '- "next_action": Any remaining edits or send instructions mentioned (1 sentence). If none, empty string.\n';
+
+const CAPTURE_TYPE_INSTRUCTIONS: Record<string, string> = {
+  planning: INSTRUCTION_PLANNING,
+  decision: INSTRUCTION_DECISION,
+  draft: INSTRUCTION_DRAFT,
+};
+
+function buildSystemPrompt(captureType?: string, userIntent?: string): string {
+  const instruction = CAPTURE_TYPE_INSTRUCTIONS[captureType || ""] || INSTRUCTION_PLANNING;
+
+  let prompt =
+    "You are a structured data extractor. Given a chat transcript, " +
+    instruction +
+    "\nReturn ONLY valid JSON, no markdown, no explanation.";
+
+  // Append user intent block if provided (do not modify system prompt structure)
+  if (userIntent && userIntent.trim().length > 0) {
+    prompt += `\n\nUser Capture Intent:\n${userIntent.trim().substring(0, 300)}`;
+  }
+
+  return prompt;
+}
+
+// --- Provider calls ---
 
 const VALID_PROVIDERS = ["openai", "anthropic", "google"] as const;
 type Provider = typeof VALID_PROVIDERS[number];
@@ -24,7 +65,7 @@ const DEFAULT_MODELS: Record<Provider, string> = {
   google: "gemini-2.0-flash",
 };
 
-async function callOpenAI(text: string, apiKey: string, model: string) {
+async function callOpenAI(text: string, apiKey: string, model: string, systemPrompt: string) {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -34,13 +75,12 @@ async function callOpenAI(text: string, apiKey: string, model: string) {
     body: JSON.stringify({
       model,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: text },
       ],
       temperature: 0.2,
     }),
   });
-  console.log("OpenAI response status:", res.status);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err?.error?.message || `OpenAI error ${res.status}`);
@@ -55,7 +95,7 @@ async function callOpenAI(text: string, apiKey: string, model: string) {
   };
 }
 
-async function callAnthropic(text: string, apiKey: string, model: string) {
+async function callAnthropic(text: string, apiKey: string, model: string, systemPrompt: string) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -66,11 +106,10 @@ async function callAnthropic(text: string, apiKey: string, model: string) {
     body: JSON.stringify({
       model,
       max_tokens: 4096,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [{ role: "user", content: text }],
     }),
   });
-  console.log("Anthropic response status:", res.status);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err?.error?.message || `Anthropic error ${res.status}`);
@@ -86,18 +125,17 @@ async function callAnthropic(text: string, apiKey: string, model: string) {
   };
 }
 
-async function callGoogle(text: string, apiKey: string, model: string) {
+async function callGoogle(text: string, apiKey: string, model: string, systemPrompt: string) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ parts: [{ text }] }],
       generationConfig: { temperature: 0.2 },
     }),
   });
-  console.log("Google AI response status:", res.status);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err?.error?.message || `Google AI error ${res.status}`);
@@ -114,11 +152,15 @@ async function callGoogle(text: string, apiKey: string, model: string) {
   };
 }
 
-const PROVIDER_FN: Record<Provider, typeof callOpenAI> = {
+type ProviderFn = (text: string, apiKey: string, model: string, systemPrompt: string) => Promise<{ raw: string; usage: { input_tokens?: number; output_tokens?: number } }>;
+
+const PROVIDER_FN: Record<Provider, ProviderFn> = {
   openai: callOpenAI,
   anthropic: callAnthropic,
   google: callGoogle,
 };
+
+// --- Handler ---
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -134,12 +176,12 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { source, chat_title, transcript, provider, api_key, model } = body;
+    const { source, chat_title, transcript, provider, api_key, model, capture_type, user_intent } = body;
 
-    // Deterministic logging
+    // Logging (no sensitive data)
     console.log("Provider:", provider);
-    console.log("Model:", model || "will use default");
-    console.log("API key length:", api_key?.length ?? 0);
+    console.log("Capture type:", capture_type || "planning");
+    console.log("User intent provided:", !!user_intent);
 
     // Validate required fields
     if (!transcript) {
@@ -165,15 +207,15 @@ Deno.serve(async (req) => {
     }
 
     const usedModel = model || DEFAULT_MODELS[provider as Provider];
+    const systemPrompt = buildSystemPrompt(capture_type, user_intent);
     const start = Date.now();
 
-    console.log("Calling provider:", provider, "model:", usedModel);
-
-    // Call AI provider directly with user's BYOK key
+    // Call AI provider with type-specific system prompt
     const aiResult = await PROVIDER_FN[provider as Provider](
       `Chat title: ${chat_title || "Untitled"}\n\nTranscript:\n${transcript}`,
       api_key,
       usedModel,
+      systemPrompt,
     );
 
     const latency_ms = Date.now() - start;
@@ -221,7 +263,15 @@ Deno.serve(async (req) => {
     console.log("Capture saved:", data.id);
 
     return new Response(
-      JSON.stringify({ ...data, provider, model: usedModel, usage: aiResult.usage, latency_ms }),
+      JSON.stringify({
+        ...data,
+        provider,
+        model: usedModel,
+        capture_type: capture_type || "planning",
+        has_user_intent: !!user_intent,
+        usage: aiResult.usage,
+        latency_ms,
+      }),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {

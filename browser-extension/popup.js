@@ -1,6 +1,11 @@
 const captureBtn = document.getElementById("capture");
 const statusEl = document.getElementById("status");
 const configStatusEl = document.getElementById("config-status");
+const modal = document.getElementById("capture-modal");
+const modalCancel = document.getElementById("modal-cancel");
+const modalConfirm = document.getElementById("modal-confirm");
+const focusField = document.getElementById("focusField");
+const charCount = document.getElementById("charCount");
 
 // Check if config has been synced from the web app
 chrome.storage.local.get(
@@ -19,8 +24,30 @@ chrome.storage.local.get(
   }
 );
 
-captureBtn.addEventListener("click", async () => {
-  // Read config from chrome.storage.local (synced from web app)
+// Character count for focus field
+focusField.addEventListener("input", () => {
+  charCount.textContent = focusField.value.length;
+});
+
+// Show modal on capture click
+captureBtn.addEventListener("click", () => {
+  // Reset modal state
+  document.querySelector('input[name="captureType"][value="planning"]').checked = true;
+  focusField.value = "";
+  charCount.textContent = "0";
+  modal.style.display = "flex";
+});
+
+modalCancel.addEventListener("click", () => {
+  modal.style.display = "none";
+});
+
+// Confirm capture from modal
+modalConfirm.addEventListener("click", async () => {
+  const captureType = document.querySelector('input[name="captureType"]:checked').value;
+  const userIntent = focusField.value.trim().substring(0, 300);
+  modal.style.display = "none";
+
   chrome.storage.local.get(
     ["cpSupabaseUrl", "cpProvider", "cpApiKey"],
     async (config) => {
@@ -57,8 +84,6 @@ captureBtn.addEventListener("click", async () => {
           try {
             const baseUrl = config.cpSupabaseUrl.replace(/\/+$/, "");
             const edgeUrl = `${baseUrl}/functions/v1/capture-and-summarize`;
-            console.log("Calling Edge:", edgeUrl);
-            console.log("Config values:", { url: config.cpSupabaseUrl, provider: config.cpProvider, hasKey: !!config.cpApiKey });
 
             const res = await fetch(edgeUrl, {
               method: "POST",
@@ -69,6 +94,8 @@ captureBtn.addEventListener("click", async () => {
                 transcript: response.transcript,
                 provider: config.cpProvider,
                 api_key: config.cpApiKey,
+                capture_type: captureType,
+                user_intent: userIntent || undefined,
               }),
             });
 

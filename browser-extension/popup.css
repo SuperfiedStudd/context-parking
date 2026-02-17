@@ -61,6 +61,22 @@ h1 {
   cursor: not-allowed;
 }
 
+.btn-secondary {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: transparent;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #ede8d6;
+}
+
 .status {
   margin-top: 10px;
   padding: 8px;
@@ -89,4 +105,93 @@ h1 {
 .status.error {
   background: #fde8e8;
   color: #c53030;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-card {
+  background: #f5f0e1;
+  border-radius: 10px;
+  padding: 16px;
+  width: 280px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal-card h2 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.field-group {
+  border: none;
+  margin-bottom: 12px;
+}
+
+.field-group legend {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #444;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.radio-option input[type="radio"] {
+  accent-color: #5bb8c4;
+}
+
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 4px;
+}
+
+.focus-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11px;
+  resize: none;
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.focus-textarea:focus {
+  outline: none;
+  border-color: #5bb8c4;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 10px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
 }
