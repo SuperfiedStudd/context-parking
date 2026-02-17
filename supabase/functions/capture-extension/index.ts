@@ -24,7 +24,9 @@ Deno.serve(async (req) => {
 
   // Temporary debug logs
   console.log(`[DEBUG] x-cp-key header present: ${!!cpKey}`);
+  if (cpKey) console.log(`[DEBUG] Incoming x-cp-key length: ${cpKey.length}`);
   console.log(`[DEBUG] EXTENSION_SHARED_KEY env var exists: ${!!sharedKey}`);
+  if (sharedKey) console.log(`[DEBUG] Expected EXTENSION_SHARED_KEY length: ${sharedKey.length}`);
 
   if (!cpKey) {
     return new Response(JSON.stringify({ error: "Missing header: x-cp-key" }), {
