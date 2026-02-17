@@ -32,7 +32,7 @@ focusField.addEventListener("input", () => {
 // Show modal on capture click
 captureBtn.addEventListener("click", () => {
   // Reset modal state
-  document.querySelector('input[name="captureType"][value="planning"]').checked = true;
+  document.querySelector('input[name="captureType"][value="structured"]').checked = true;
   focusField.value = "";
   charCount.textContent = "0";
   modal.style.display = "flex";

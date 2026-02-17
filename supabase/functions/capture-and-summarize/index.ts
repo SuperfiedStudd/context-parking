@@ -8,21 +8,22 @@ const corsHeaders = {
 
 // --- Instruction templates by capture type ---
 
-const INSTRUCTION_PLANNING =
+const INSTRUCTION_STRUCTURED =
+  "You are reconstructing structured memory from a working session.\n" +
+  "Your goal is high-fidelity memory reconstruction, not compression.\n\n" +
   "Extract EXACTLY these fields as JSON:\n" +
-  '- "summary": 2-3 sentence overview of the conversation\n' +
-  '- "objective": What the user was trying to accomplish (1 sentence)\n' +
-  '- "alternatives": Array of up to 3 approaches/options discussed (strings). Preserve tangents as alternatives unless user intent elevates them. If none, empty array.\n' +
-  '- "chosen_direction": Which approach was favored (1 sentence). If none, empty string.\n' +
-  '- "next_action": Suggested next step (1 sentence). If none, empty string.\n';
-
-const INSTRUCTION_DECISION =
-  "Extract EXACTLY these fields as JSON:\n" +
-  '- "summary": 2-3 sentence overview of the final decision reached\n' +
-  '- "objective": What decision was being made (1 sentence)\n' +
-  '- "alternatives": Array of up to 3 rejected options (strings). Clearly mark these as rejected. If none, empty array.\n' +
-  '- "chosen_direction": The confirmed conclusion or decision (1 sentence)\n' +
-  '- "next_action": Immediate next step following the decision (1 sentence). If none, empty string.\n';
+  '- "summary": 2-4 sentence overview covering objective, core reasoning, and key constraints\n' +
+  '- "objective": What the user was trying to accomplish (1-2 sentences)\n' +
+  '- "alternatives": Array of up to 5 strategic forks — competing paths discussed (strings). Preserve important nuance and tradeoffs. If none, empty array.\n' +
+  '- "chosen_direction": Core reasoning for the chosen path plus key constraints (technical, cost, scope, token, UX limits). Include deferred decisions and open questions. If none, empty string.\n' +
+  '- "next_action": Immediate next action ONLY if clearly actionable and agreed. If no clear immediate action exists, state: "No immediate execution step defined."\n\n' +
+  "Rules:\n" +
+  "- Do NOT overly compress reasoning.\n" +
+  "- Preserve important nuance and tradeoffs.\n" +
+  "- Do NOT convert deferred exploration into execution steps.\n" +
+  "- Do NOT invent new ideas.\n" +
+  "- Keep output under ~700 words.\n" +
+  "- Clarity over brevity.\n";
 
 const INSTRUCTION_DRAFT =
   "Extract EXACTLY these fields as JSON:\n" +
@@ -33,8 +34,8 @@ const INSTRUCTION_DRAFT =
   '- "next_action": Any remaining edits or send instructions mentioned (1 sentence). If none, empty string.\n';
 
 const CAPTURE_TYPE_INSTRUCTIONS: Record<string, string> = {
-  planning: INSTRUCTION_PLANNING,
-  decision: INSTRUCTION_DECISION,
+  structured: INSTRUCTION_STRUCTURED,
+  planning: INSTRUCTION_STRUCTURED,
   draft: INSTRUCTION_DRAFT,
 };
 
