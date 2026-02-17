@@ -57,6 +57,8 @@ captureBtn.addEventListener("click", async () => {
           try {
             const baseUrl = config.cpSupabaseUrl.replace(/\/+$/, "");
             const edgeUrl = `${baseUrl}/functions/v1/capture-and-summarize`;
+            console.log("Calling Edge:", edgeUrl);
+            console.log("Config values:", { url: config.cpSupabaseUrl, provider: config.cpProvider, hasKey: !!config.cpApiKey });
 
             const res = await fetch(edgeUrl, {
               method: "POST",
