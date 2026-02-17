@@ -6,7 +6,7 @@
 
 body {
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  width: 320px;
+  width: 300px;
   background: #f5f0e1;
   color: #1a1a1a;
 }
@@ -18,50 +18,26 @@ body {
 h1 {
   font-size: 15px;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-.settings {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-label {
+.config-status {
   font-size: 11px;
-  font-weight: 600;
-  color: #555;
-}
-
-input {
-  padding: 6px 8px;
-  border: 1px solid #d4c9a8;
+  padding: 8px;
   border-radius: 6px;
-  font-size: 12px;
-  background: #faf6ec;
-  outline: none;
+  margin-bottom: 12px;
+  text-align: center;
+  font-weight: 500;
 }
 
-input:focus,
-select:focus {
-  border-color: #5bb8c4;
-  box-shadow: 0 0 0 2px rgba(91, 184, 196, 0.2);
+.config-status.connected {
+  background: #e2f0d9;
+  color: #3a7a2a;
 }
 
-select {
-  padding: 6px 8px;
-  border: 1px solid #d4c9a8;
-  border-radius: 6px;
-  font-size: 12px;
-  background: #faf6ec;
-  outline: none;
-  cursor: pointer;
-}
-
-hr {
-  border: none;
-  border-top: 1px solid #d4c9a8;
-  margin: 12px 0;
+.config-status.disconnected {
+  background: #fde8e8;
+  color: #c53030;
 }
 
 .btn-primary {
@@ -76,20 +52,13 @@ hr {
   cursor: pointer;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #4da8b4;
 }
 
-.btn-secondary {
-  width: 100%;
-  padding: 6px;
-  border: 1px solid #d4c9a8;
-  border-radius: 6px;
-  background: transparent;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-top: 4px;
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .status {
