@@ -21,8 +21,25 @@ Deno.serve(async (req) => {
   // Validate shared key
   const cpKey = req.headers.get("x-cp-key");
   const sharedKey = Deno.env.get("EXTENSION_SHARED_KEY");
-  if (!cpKey || cpKey !== sharedKey) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+
+  // Temporary debug logs
+  console.log(`[DEBUG] x-cp-key header present: ${!!cpKey}`);
+  console.log(`[DEBUG] EXTENSION_SHARED_KEY env var exists: ${!!sharedKey}`);
+
+  if (!cpKey) {
+    return new Response(JSON.stringify({ error: "Missing header: x-cp-key" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  if (!sharedKey) {
+    return new Response(JSON.stringify({ error: "Missing secret: EXTENSION_SHARED_KEY" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  if (cpKey !== sharedKey) {
+    return new Response(JSON.stringify({ error: "Key mismatch" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
