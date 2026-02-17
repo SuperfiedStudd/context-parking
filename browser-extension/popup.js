@@ -1,30 +1,37 @@
 const urlInput = document.getElementById("url");
-const keyInput = document.getElementById("key");
+const providerSelect = document.getElementById("provider");
+const apikeyInput = document.getElementById("apikey");
 const saveBtn = document.getElementById("save");
 const captureBtn = document.getElementById("capture");
 const statusEl = document.getElementById("status");
 
 // Load saved settings
-chrome.storage.local.get(["cpUrl", "cpKey"], (data) => {
-  if (data.cpUrl) urlInput.value = data.cpUrl;
-  if (data.cpKey) keyInput.value = data.cpKey;
+chrome.storage.local.get(["cpSupabaseUrl", "cpProvider", "cpApiKey"], (data) => {
+  if (data.cpSupabaseUrl) urlInput.value = data.cpSupabaseUrl;
+  if (data.cpProvider) providerSelect.value = data.cpProvider;
+  if (data.cpApiKey) apikeyInput.value = data.cpApiKey;
 });
 
 // Save settings
 saveBtn.addEventListener("click", () => {
   chrome.storage.local.set(
-    { cpUrl: urlInput.value.trim(), cpKey: keyInput.value.trim() },
+    {
+      cpSupabaseUrl: urlInput.value.trim(),
+      cpProvider: providerSelect.value,
+      cpApiKey: apikeyInput.value.trim(),
+    },
     () => setStatus("Settings saved", "success")
   );
 });
 
 // Capture
 captureBtn.addEventListener("click", async () => {
-  const url = urlInput.value.trim();
-  const key = keyInput.value.trim();
+  const supabaseUrl = urlInput.value.trim();
+  const provider = providerSelect.value;
+  const apiKey = apikeyInput.value.trim();
 
-  if (!url || !key) {
-    setStatus("Configure URL and key first", "error");
+  if (!supabaseUrl || !apiKey) {
+    setStatus("Configure Supabase URL and API key first", "error");
     return;
   }
 
@@ -33,13 +40,11 @@ captureBtn.addEventListener("click", async () => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    // Inject content script if needed, then send scrape message
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       files: ["content.js"],
     });
 
-    // Small delay to let the content script register its listener
     await new Promise((r) => setTimeout(r, 200));
 
     chrome.tabs.sendMessage(tab.id, { action: "scrape" }, async (response) => {
@@ -53,19 +58,20 @@ captureBtn.addEventListener("click", async () => {
         return;
       }
 
-      setStatus("Sending…", "sending");
+      setStatus("Summarizing & saving…", "sending");
 
       try {
-        const res = await fetch(url, {
+        const edgeUrl = `${supabaseUrl}/functions/v1/capture-and-summarize`;
+
+        const res = await fetch(edgeUrl, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-cp-key": key,
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             source: response.source,
             chat_title: response.chatTitle,
             transcript: response.transcript,
+            provider: provider,
+            api_key: apiKey,
           }),
         });
 
@@ -74,7 +80,9 @@ captureBtn.addEventListener("click", async () => {
           throw new Error(err.error || `HTTP ${res.status}`);
         }
 
-        setStatus("Captured ✓", "success");
+        const data = await res.json();
+        const latency = data.latency_ms ? ` (${(data.latency_ms / 1000).toFixed(1)}s)` : "";
+        setStatus(`Captured ✓${latency}`, "success");
       } catch (e) {
         setStatus(`Error: ${e.message}`, "error");
       }

@@ -11,11 +11,18 @@
     <h1>Context Parking</h1>
 
     <div class="settings">
-      <label for="url">Edge Function URL</label>
-      <input type="text" id="url" placeholder="https://xxx.supabase.co/functions/v1/capture-extension" />
+      <label for="url">Supabase URL</label>
+      <input type="text" id="url" placeholder="https://xxx.supabase.co" />
 
-      <label for="key">Shared Key</label>
-      <input type="password" id="key" placeholder="Your EXTENSION_SHARED_KEY" />
+      <label for="provider">AI Provider</label>
+      <select id="provider">
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic (Claude)</option>
+        <option value="google">Google (Gemini)</option>
+      </select>
+
+      <label for="apikey">AI API Key</label>
+      <input type="password" id="apikey" placeholder="Your provider API key" />
 
       <button id="save" class="btn-secondary">Save Settings</button>
     </div>

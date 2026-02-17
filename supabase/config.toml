@@ -2,3 +2,6 @@ project_id = "sdjdzvcwfcdtngknrasp"
 
 [functions.capture-extension]
 verify_jwt = false
+
+[functions.capture-and-summarize]
+verify_jwt = false
