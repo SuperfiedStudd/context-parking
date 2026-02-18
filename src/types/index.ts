@@ -10,11 +10,12 @@ export interface Draft {
 
 export interface ActivityEvent {
   id: string;
-  type: 'created' | 'updated' | 'reminder_set' | 'draft_copied' | 'context_generated' | 'draft_status_changed' | 'field_edited' | 'archived' | 'reactivated';
+  type: 'created' | 'updated' | 'reminder_set' | 'draft_copied' | 'context_generated' | 'draft_status_changed' | 'field_edited' | 'archived' | 'reactivated' | 'second_opinion_generated';
   description: string;
   timestamp: string;
   fieldName?: string;
   previousValue?: string;
+  secondOpinionId?: string;
 }
 
 export type ProjectStatus = 'active' | 'archived';
