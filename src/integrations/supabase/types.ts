@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_second_opinions: {
+        Row: {
+          ai_model: string
+          ai_provider: string
+          compiled_context: string
+          created_at: string
+          id: string
+          instruction: string | null
+          project_id: string
+          response: string
+        }
+        Insert: {
+          ai_model: string
+          ai_provider: string
+          compiled_context: string
+          created_at?: string
+          id?: string
+          instruction?: string | null
+          project_id: string
+          response: string
+        }
+        Update: {
+          ai_model?: string
+          ai_provider?: string
+          compiled_context?: string
+          created_at?: string
+          id?: string
+          instruction?: string | null
+          project_id?: string
+          response?: string
+        }
+        Relationships: []
+      }
       captures: {
         Row: {
           ai_model: string | null

@@ -2,8 +2,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Layout } from '@/components/Layout';
 import { ActivityTimeline } from '@/components/ActivityTimeline';
+import { SecondOpinionSection } from '@/components/SecondOpinionSection';
 import { ContextPromptDrawer } from '@/components/ContextPromptDrawer';
 import { Button } from '@/components/ui/button';
+import { deleteSecondOpinion } from '@/lib/api/secondOpinions';
 import { Badge } from '@/components/ui/badge';
 import { useState, useRef, useEffect } from 'react';
 import {
@@ -194,6 +196,7 @@ export default function ProjectDetail() {
   const project = projects.find((p) => p.id === id);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [confirmDeleteEvent, setConfirmDeleteEvent] = useState<{ eventId: string; secondOpinionId?: string } | null>(null);
 
   if (!project) {
     return (
@@ -244,8 +247,28 @@ export default function ProjectDetail() {
   };
 
   const handleDeleteEvent = (eventId: string) => {
-    deleteActivityEvent(project.id, eventId);
-    toast.success('Activity entry removed');
+    const event = project.activityLog.find((e) => e.id === eventId);
+    if (event?.type === 'second_opinion_generated' && event.secondOpinionId) {
+      setConfirmDeleteEvent({ eventId, secondOpinionId: event.secondOpinionId });
+    } else {
+      deleteActivityEvent(project.id, eventId);
+      toast.success('Activity entry removed');
+    }
+  };
+
+  const confirmDeleteActivityEvent = async () => {
+    if (!confirmDeleteEvent) return;
+    try {
+      if (confirmDeleteEvent.secondOpinionId) {
+        await deleteSecondOpinion(confirmDeleteEvent.secondOpinionId);
+      }
+      deleteActivityEvent(project.id, confirmDeleteEvent.eventId);
+      toast.success('Activity entry and AI response deleted');
+    } catch (err: any) {
+      toast.error('Failed to delete: ' + (err.message || 'Unknown error'));
+    } finally {
+      setConfirmDeleteEvent(null);
+    }
   };
 
   const handleArchive = () => {
@@ -373,6 +396,9 @@ export default function ProjectDetail() {
             value={project.nextAction}
             onSave={(v) => editField('nextAction', 'Next Action', v, project.nextAction)}
           />
+
+          {/* Second Opinion */}
+          {!isArchived && <SecondOpinionSection project={project} />}
         </div>
 
         {/* Right — Activity */}
@@ -397,6 +423,18 @@ export default function ProjectDetail() {
           <DialogFooter>
             <Button variant="secondary" onClick={() => setConfirmArchive(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleArchive}>Archive</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete second opinion activity confirm dialog */}
+      <Dialog open={!!confirmDeleteEvent} onOpenChange={(open) => { if (!open) setConfirmDeleteEvent(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete this activity entry?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">This will permanently delete this AI response from the database. This action cannot be undone.</p>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setConfirmDeleteEvent(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDeleteActivityEvent}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
