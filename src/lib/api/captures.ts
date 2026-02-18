@@ -30,6 +30,8 @@ export async function fetchCaptures(): Promise<DbCapture[]> {
     executive_snapshot: row.executive_snapshot || row.summary || "",
     resolved_to_project_id: row.resolved_to_project_id,
     created_at: row.created_at,
+    ai_provider: row.ai_provider || undefined,
+    ai_model: row.ai_model || undefined,
   }));
 }
 

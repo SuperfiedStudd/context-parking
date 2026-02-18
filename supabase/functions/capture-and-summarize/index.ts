@@ -67,8 +67,8 @@ const VALID_PROVIDERS = ["openai", "anthropic", "google"] as const;
 type Provider = typeof VALID_PROVIDERS[number];
 
 const DEFAULT_MODELS: Record<Provider, string> = {
-  openai: "gpt-4o-mini",
-  anthropic: "claude-3-5-sonnet-latest",
+  openai: "gpt-4.1-mini",
+  anthropic: "claude-4-sonnet",
   google: "gemini-2.0-flash",
 };
 
@@ -262,6 +262,8 @@ Deno.serve(async (req) => {
         next_action: parsed.next_action || "",
         executive_snapshot: parsed.executive_snapshot || parsed.summary || "",
         status: "active",
+        ai_provider: provider,
+        ai_model: usedModel,
       })
       .select()
       .single();

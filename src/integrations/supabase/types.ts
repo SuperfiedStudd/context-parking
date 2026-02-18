@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       captures: {
         Row: {
+          ai_model: string | null
+          ai_provider: string | null
           alternatives: Json | null
           chat_title: string | null
           chosen_direction: string | null
@@ -33,6 +35,8 @@ export type Database = {
           summary: string | null
         }
         Insert: {
+          ai_model?: string | null
+          ai_provider?: string | null
           alternatives?: Json | null
           chat_title?: string | null
           chosen_direction?: string | null
@@ -50,6 +54,8 @@ export type Database = {
           summary?: string | null
         }
         Update: {
+          ai_model?: string | null
+          ai_provider?: string | null
           alternatives?: Json | null
           chat_title?: string | null
           chosen_direction?: string | null
