@@ -13,6 +13,7 @@ const filters: { key: ProjectFilter; label: string }[] = [
   { key: 'dormant', label: 'Dormant' },
   { key: 'unsent_drafts', label: 'Unsent Drafts' },
   { key: 'open_forks', label: 'Open Forks' },
+  { key: 'archived', label: 'Archived' },
 ];
 
 export default function Projects() {
@@ -22,24 +23,30 @@ export default function Projects() {
   const fourteenDays = 14 * 86400000;
 
   const upNext = projects.filter(
-    (p) => p.reminderAt && new Date(p.reminderAt).getTime() > now && new Date(p.reminderAt).getTime() - now < 2 * 86400000
+    (p) => p.status !== 'archived' && p.reminderAt && new Date(p.reminderAt).getTime() > now && new Date(p.reminderAt).getTime() - now < 2 * 86400000
   );
   const dormantNudges = projects.filter(
-    (p) => now - new Date(p.lastActiveAt).getTime() > fourteenDays
+    (p) => p.status !== 'archived' && now - new Date(p.lastActiveAt).getTime() > fourteenDays
   );
 
   const filtered = projects.filter((p) => {
+    const isArchived = p.status === 'archived';
+    // 'all' excludes archived; 'archived' shows only archived
     switch (filter) {
+      case 'all':
+        return !isArchived;
       case 'active':
-        return now - new Date(p.lastActiveAt).getTime() < fourteenDays;
+        return !isArchived && now - new Date(p.lastActiveAt).getTime() < fourteenDays;
       case 'dormant':
-        return now - new Date(p.lastActiveAt).getTime() >= fourteenDays;
+        return !isArchived && now - new Date(p.lastActiveAt).getTime() >= fourteenDays;
       case 'unsent_drafts':
-        return p.drafts.some((d) => d.status !== 'Sent');
+        return !isArchived && p.drafts.some((d) => d.status !== 'Sent');
       case 'open_forks':
-        return p.strategicForks.length > 0 && !p.chosenDirection;
+        return !isArchived && (p.strategicForks || []).length > 0 && !p.chosenDirection;
+      case 'archived':
+        return isArchived;
       default:
-        return true;
+        return !isArchived;
     }
   });
 

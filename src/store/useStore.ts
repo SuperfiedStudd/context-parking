@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Project, CaptureEvent, ActivityEvent, DraftStatus, ProjectFilter, ViewMode } from '@/types';
+import { Project, CaptureEvent, ActivityEvent, DraftStatus, ProjectFilter, ViewMode, ProjectStatus } from '@/types';
 import { seedProjects } from '@/data/seed';
 
 interface AppState {
@@ -19,7 +19,10 @@ interface AppState {
   addProject: (p: Project) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
   deleteProject: (id: string) => void;
+  archiveProject: (id: string) => void;
+  reactivateProject: (id: string) => void;
   addActivityEvent: (projectId: string, event: Omit<ActivityEvent, 'id' | 'timestamp'>) => void;
+  deleteActivityEvent: (projectId: string, eventId: string) => void;
 
   updateDraftStatus: (projectId: string, draftId: string, status: DraftStatus) => void;
   updateDraftContent: (projectId: string, draftId: string, content: string) => void;
@@ -54,6 +57,24 @@ export const useStore = create<AppState>()(
         })),
       deleteProject: (id) => set((s) => ({ projects: s.projects.filter((p) => p.id !== id) })),
 
+      archiveProject: (id) => {
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === id ? { ...p, status: 'archived' as ProjectStatus, lastActiveAt: new Date().toISOString() } : p
+          ),
+        }));
+        get().addActivityEvent(id, { type: 'archived', description: 'Project archived' });
+      },
+
+      reactivateProject: (id) => {
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === id ? { ...p, status: 'active' as ProjectStatus, lastActiveAt: new Date().toISOString() } : p
+          ),
+        }));
+        get().addActivityEvent(id, { type: 'reactivated', description: 'Project reactivated' });
+      },
+
       addActivityEvent: (projectId, event) =>
         set((s) => ({
           projects: s.projects.map((p) =>
@@ -66,6 +87,15 @@ export const useStore = create<AppState>()(
                   ],
                   lastActiveAt: new Date().toISOString(),
                 }
+              : p
+          ),
+        })),
+
+      deleteActivityEvent: (projectId, eventId) =>
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === projectId
+              ? { ...p, activityLog: p.activityLog.filter((e) => e.id !== eventId) }
               : p
           ),
         })),

@@ -10,10 +10,14 @@ export interface Draft {
 
 export interface ActivityEvent {
   id: string;
-  type: 'created' | 'updated' | 'reminder_set' | 'draft_copied' | 'context_generated' | 'draft_status_changed';
+  type: 'created' | 'updated' | 'reminder_set' | 'draft_copied' | 'context_generated' | 'draft_status_changed' | 'field_edited' | 'archived' | 'reactivated';
   description: string;
   timestamp: string;
+  fieldName?: string;
+  previousValue?: string;
 }
+
+export type ProjectStatus = 'active' | 'archived';
 
 export interface Project {
   id: string;
@@ -28,6 +32,7 @@ export interface Project {
   lastActiveAt: string;
   reminderAt?: string;
   activityLog: ActivityEvent[];
+  status?: ProjectStatus;
 }
 
 export interface CaptureEvent {
@@ -38,7 +43,7 @@ export interface CaptureEvent {
   resolvedToProjectId?: string;
 }
 
-export type ProjectFilter = 'all' | 'active' | 'dormant' | 'unsent_drafts' | 'open_forks';
+export type ProjectFilter = 'all' | 'active' | 'dormant' | 'unsent_drafts' | 'open_forks' | 'archived';
 export type ViewMode = 'list' | 'grid';
 
 export interface DbCapture {
