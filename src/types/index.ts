@@ -60,4 +60,6 @@ export interface DbCapture {
   executive_snapshot: string;
   resolved_to_project_id: string | null;
   created_at: string;
+  ai_provider?: string;
+  ai_model?: string;
 }
