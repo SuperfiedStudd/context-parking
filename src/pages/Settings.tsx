@@ -35,7 +35,8 @@ export default function SettingsPage({ onOpenWizard }: SettingsPageProps) {
   const { storeRawTranscripts, setStoreRawTranscripts, clearAllData } = useStore();
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-  const config = getConfig();
+  const [config, setLocalConfig] = useState(() => getConfig());
+  const refreshConfig = () => setLocalConfig(getConfig());
 
   // Editable AI keys
   const [editingKey, setEditingKey] = useState<AiProvider | null>(null);
@@ -112,6 +113,7 @@ export default function SettingsPage({ onOpenWizard }: SettingsPageProps) {
                   </div>
                   <AiProviderSettings
                     config={config}
+                    onConfigChange={refreshConfig}
                     onEditKey={(p) => {
                       setEditingKey(p);
                       setEditKeyValue('');

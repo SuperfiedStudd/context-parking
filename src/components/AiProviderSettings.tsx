@@ -23,14 +23,16 @@ import { toast } from 'sonner';
 interface Props {
   config: CpConfig;
   onEditKey: (provider: AiProvider) => void;
+  onConfigChange?: () => void;
 }
 
-export function AiProviderSettings({ config, onEditKey }: Props) {
+export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props) {
   const enabledProviders = getEnabledProviders(config);
 
   const handlePrimaryChange = (value: string) => {
     const updated: CpConfig = { ...config, ai: { ...config.ai, primaryProvider: value as AiProvider } };
     setConfig(updated);
+    onConfigChange?.();
     toast.success(`Primary provider set to ${PROVIDER_LABELS[value as AiProvider]}`);
   };
 
@@ -46,6 +48,7 @@ export function AiProviderSettings({ config, onEditKey }: Props) {
       },
     };
     setConfig(updated);
+    onConfigChange?.();
     toast.success(`${PROVIDER_LABELS[provider]} model set to ${getModelLabel(provider, modelId)}`);
   };
 
