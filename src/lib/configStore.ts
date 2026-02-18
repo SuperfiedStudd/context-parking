@@ -5,6 +5,7 @@ export type AiProvider = 'openai' | 'anthropic' | 'google';
 
 export interface ProviderConfig {
   apiKey: string;
+  model?: string;
 }
 
 export interface CpConfig {

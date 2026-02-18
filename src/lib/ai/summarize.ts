@@ -12,9 +12,11 @@ export interface SummarizeResponse extends SummarizeResult {
   latency_ms: number;
 }
 
+import { DEFAULT_MODELS } from './models';
+
 const PROVIDER_FN: Record<
   AiProvider,
-  (text: string, key: string) => Promise<SummarizeResult>
+  (text: string, key: string, model?: string) => Promise<SummarizeResult>
 > = {
   openai: summarizeWithOpenAI,
   anthropic: summarizeWithAnthropic,
@@ -34,14 +36,16 @@ export async function summarize(text: string): Promise<SummarizeResponse> {
   let lastError: Error | null = null;
 
   for (const provider of ordered) {
-    const key = config.ai.providers[provider]?.apiKey;
+    const providerConfig = config.ai.providers[provider];
+    const key = providerConfig?.apiKey;
     if (!key) continue;
 
+    const model = providerConfig?.model || DEFAULT_MODELS[provider];
     const fn = PROVIDER_FN[provider];
     const start = Date.now();
 
     try {
-      const result = await fn(text, key);
+      const result = await fn(text, key, model);
       return {
         ...result,
         provider,

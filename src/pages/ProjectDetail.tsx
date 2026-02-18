@@ -7,31 +7,193 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useState, useRef, useEffect } from 'react';
 import {
-  ArrowLeft, FileText, Copy, Check, CheckCircle, Send, Bell, Clock, Edit3,
+  ArrowLeft, FileText, Copy, Check, CheckCircle, Send, Bell, Clock, Edit3, Archive, RotateCcw, Plus, X, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { relativeTime } from '@/lib/helpers';
 import { DraftStatus } from '@/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+
+// Reusable editable text section
+function EditableSection({
+  label,
+  value,
+  onSave,
+  multiline = false,
+  placeholder = 'Not set',
+}: {
+  label: string;
+  value: string;
+  onSave: (newValue: string) => void;
+  multiline?: boolean;
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+  const ref = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
+
+  useEffect(() => { setEditValue(value); }, [value]);
+
+  const save = () => {
+    if (editValue !== value) onSave(editValue);
+    setEditing(false);
+  };
+
+  return (
+    <div className="bg-card border rounded-lg p-4 card-shadow">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</h3>
+        {!editing && (
+          <button
+            className="text-xs text-muted-foreground hover:text-foreground transition-smooth"
+            onClick={() => { setEditing(true); setTimeout(() => ref.current?.focus(), 50); }}
+          >
+            Edit
+          </button>
+        )}
+      </div>
+      {editing ? (
+        multiline ? (
+          <textarea
+            ref={ref as React.RefObject<HTMLTextAreaElement>}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            className="w-full rounded-md border bg-background p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+            rows={3}
+            onBlur={save}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); } }}
+          />
+        ) : (
+          <input
+            ref={ref as React.RefObject<HTMLInputElement>}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            className="w-full rounded-md border bg-background p-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            onBlur={save}
+            onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
+          />
+        )
+      ) : (
+        <p className="text-sm">{value || <span className="text-muted-foreground italic">{placeholder}</span>}</p>
+      )}
+    </div>
+  );
+}
+
+// Editable list section (for strategic forks, deferred decisions)
+function EditableListSection({
+  label,
+  items,
+  onSave,
+}: {
+  label: string;
+  items: string[];
+  onSave: (newItems: string[]) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editItems, setEditItems] = useState(items);
+  const [newItem, setNewItem] = useState('');
+
+  useEffect(() => { setEditItems(items); }, [items]);
+
+  const save = () => {
+    const filtered = editItems.filter((i) => i.trim());
+    if (JSON.stringify(filtered) !== JSON.stringify(items)) onSave(filtered);
+    setEditing(false);
+  };
+
+  const addItem = () => {
+    if (newItem.trim()) {
+      setEditItems([...editItems, newItem.trim()]);
+      setNewItem('');
+    }
+  };
+
+  const removeItem = (idx: number) => {
+    setEditItems(editItems.filter((_, i) => i !== idx));
+  };
+
+  const updateItem = (idx: number, val: string) => {
+    setEditItems(editItems.map((item, i) => (i === idx ? val : item)));
+  };
+
+  return (
+    <div className="bg-card border rounded-lg p-4 card-shadow">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</h3>
+        {!editing ? (
+          <button
+            className="text-xs text-muted-foreground hover:text-foreground transition-smooth"
+            onClick={() => setEditing(true)}
+          >
+            Edit
+          </button>
+        ) : (
+          <button
+            className="text-xs text-primary hover:text-primary/80 font-medium transition-smooth"
+            onClick={save}
+          >
+            Done
+          </button>
+        )}
+      </div>
+      {editing ? (
+        <div className="space-y-2">
+          {editItems.map((item, i) => (
+            <div key={i} className="flex gap-2 items-center">
+              <span className="text-muted-foreground font-mono text-xs">{i + 1}.</span>
+              <input
+                value={item}
+                onChange={(e) => updateItem(i, e.target.value)}
+                className="flex-1 rounded-md border bg-background p-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <button onClick={() => removeItem(i)} className="text-muted-foreground hover:text-destructive">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+          <div className="flex gap-2 items-center">
+            <input
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              placeholder="Add new…"
+              className="flex-1 rounded-md border bg-background p-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              onKeyDown={(e) => { if (e.key === 'Enter') addItem(); }}
+            />
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={addItem} disabled={!newItem.trim()}>
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+      ) : items.length > 0 ? (
+        <div className="space-y-2">
+          {items.map((f, i) => (
+            <div key={i} className="flex gap-2 items-start text-sm">
+              <span className="text-muted-foreground font-mono text-xs mt-0.5">{i + 1}.</span>
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground italic">None</p>
+      )}
+    </div>
+  );
+}
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { projects, updateProject, updateDraftStatus, updateDraftContent, addActivityEvent } = useStore();
+  const { projects, updateProject, updateDraftStatus, addActivityEvent, deleteActivityEvent, archiveProject, reactivateProject } = useStore();
   const project = projects.find((p) => p.id === id);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingObjective, setEditingObjective] = useState(false);
-  const [editingNextAction, setEditingNextAction] = useState(false);
-  const [objectiveValue, setObjectiveValue] = useState('');
-  const [nextActionValue, setNextActionValue] = useState('');
-  const objectiveRef = useRef<HTMLTextAreaElement>(null);
-  const nextActionRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (project) {
-      setObjectiveValue(project.objective);
-      setNextActionValue(project.nextAction);
-    }
-  }, [project]);
+  const [confirmArchive, setConfirmArchive] = useState(false);
 
   if (!project) {
     return (
@@ -46,16 +208,16 @@ export default function ProjectDetail() {
     );
   }
 
-  const saveObjective = () => {
-    updateProject(project.id, { objective: objectiveValue });
-    setEditingObjective(false);
-    addActivityEvent(project.id, { type: 'updated', description: 'Objective updated' });
-  };
+  const isArchived = project.status === 'archived';
 
-  const saveNextAction = () => {
-    updateProject(project.id, { nextAction: nextActionValue });
-    setEditingNextAction(false);
-    addActivityEvent(project.id, { type: 'updated', description: 'Next action updated' });
+  const editField = (fieldName: string, fieldLabel: string, newValue: any, previousValue?: string) => {
+    updateProject(project.id, { [fieldName]: newValue });
+    addActivityEvent(project.id, {
+      type: 'field_edited',
+      description: `${fieldLabel} edited`,
+      fieldName,
+      previousValue: previousValue?.substring(0, 200),
+    });
   };
 
   const copyDraft = async (content: string) => {
@@ -81,6 +243,22 @@ export default function ProjectDetail() {
     updateDraftStatus(project.id, draftId, next);
   };
 
+  const handleDeleteEvent = (eventId: string) => {
+    deleteActivityEvent(project.id, eventId);
+    toast.success('Activity entry removed');
+  };
+
+  const handleArchive = () => {
+    archiveProject(project.id);
+    setConfirmArchive(false);
+    toast.success('Project archived');
+  };
+
+  const handleReactivate = () => {
+    reactivateProject(project.id);
+    toast.success('Project reactivated');
+  };
+
   return (
     <Layout>
       <div className="mb-4">
@@ -90,85 +268,71 @@ export default function ProjectDetail() {
       </div>
 
       <div className="flex items-start justify-between mb-6">
-        <h1 className="text-xl font-bold">{project.title}</h1>
-        <Button className="gap-2" onClick={() => setDrawerOpen(true)}>
-          <FileText className="w-4 h-4" /> Compile Context Inject Prompt
-        </Button>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold">{project.title}</h1>
+          {isArchived && (
+            <Badge variant="secondary" className="gap-1">
+              <Archive className="w-3 h-3" /> Archived
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {isArchived ? (
+            <Button variant="secondary" className="gap-2" onClick={handleReactivate}>
+              <RotateCcw className="w-4 h-4" /> Reactivate
+            </Button>
+          ) : (
+            <Button variant="secondary" className="gap-2" onClick={() => setConfirmArchive(true)}>
+              <Archive className="w-4 h-4" /> Archive
+            </Button>
+          )}
+          <Button className="gap-2" onClick={() => setDrawerOpen(true)}>
+            <FileText className="w-4 h-4" /> Compile Context Inject Prompt
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left — Structured State */}
         <div className="lg:col-span-2 space-y-4">
           {/* Executive Snapshot */}
-          {project.executiveSnapshot && (
-            <div className="bg-card border rounded-lg p-4 card-shadow">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Executive Snapshot</h3>
-              <pre className="text-sm whitespace-pre-wrap font-sans">{project.executiveSnapshot}</pre>
-            </div>
-          )}
+          <EditableSection
+            label="Executive Snapshot"
+            value={project.executiveSnapshot || ''}
+            onSave={(v) => editField('executiveSnapshot', 'Executive Snapshot', v, project.executiveSnapshot)}
+            multiline
+            placeholder="No snapshot"
+          />
 
           {/* Objective */}
-          <div className="bg-card border rounded-lg p-4 card-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Objective</h3>
-              {!editingObjective && (
-                <button className="text-xs text-muted-foreground hover:text-foreground transition-smooth" onClick={() => { setEditingObjective(true); setTimeout(() => objectiveRef.current?.focus(), 50); }}>
-                  Edit
-                </button>
-              )}
-            </div>
-            {editingObjective ? (
-              <div>
-                <textarea
-                  ref={objectiveRef}
-                  value={objectiveValue}
-                  onChange={(e) => setObjectiveValue(e.target.value)}
-                  className="w-full rounded-md border bg-background p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-                  rows={2}
-                  onBlur={saveObjective}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveObjective(); } }}
-                />
-              </div>
-            ) : (
-              <p className="text-sm">{project.objective}</p>
-            )}
-          </div>
+          <EditableSection
+            label="Objective"
+            value={project.objective}
+            onSave={(v) => editField('objective', 'Objective', v, project.objective)}
+            multiline
+          />
 
           {/* Chosen Direction */}
-          <div className="bg-card border rounded-lg p-4 card-shadow">
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Chosen Direction</h3>
-            <p className="text-sm">{project.chosenDirection || <span className="text-muted-foreground italic">Not set</span>}</p>
-          </div>
+          <EditableSection
+            label="Chosen Direction"
+            value={project.chosenDirection}
+            onSave={(v) => editField('chosenDirection', 'Chosen Direction', v, project.chosenDirection)}
+            multiline
+          />
 
           {/* Strategic Forks */}
-          {(project.strategicForks || []).length > 0 && (
-            <div className="bg-card border rounded-lg p-4 card-shadow">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Strategic Forks</h3>
-              <div className="space-y-2">
-                {(project.strategicForks || []).map((f, i) => (
-                  <div key={i} className="flex gap-2 items-start text-sm">
-                    <span className="text-muted-foreground font-mono text-xs mt-0.5">{i + 1}.</span>
-                    <span>{f}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <EditableListSection
+            label="Strategic Forks"
+            items={project.strategicForks || []}
+            onSave={(v) => editField('strategicForks', 'Strategic Forks', v, (project.strategicForks || []).join('; '))}
+          />
 
           {/* Deferred Decisions */}
-          {(project.deferredDecisions || []).length > 0 && (
-            <div className="bg-card border rounded-lg p-4 card-shadow">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Deferred Decisions</h3>
-              <div className="space-y-2">
-                {(project.deferredDecisions || []).map((d, i) => (
-                  <div key={i} className="flex gap-2 items-start text-sm">
-                    <span className="text-muted-foreground font-mono text-xs mt-0.5">{i + 1}.</span>
-                    <span>{d}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <EditableListSection
+            label="Deferred Decisions"
+            items={project.deferredDecisions || []}
+            onSave={(v) => editField('deferredDecisions', 'Deferred Decisions', v, (project.deferredDecisions || []).join('; '))}
+          />
 
           {/* Drafts */}
           {project.drafts.length > 0 && (
@@ -204,28 +368,11 @@ export default function ProjectDetail() {
           )}
 
           {/* Next Action */}
-          <div className="bg-card border rounded-lg p-4 card-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Next Action</h3>
-              {!editingNextAction && (
-                <button className="text-xs text-muted-foreground hover:text-foreground transition-smooth" onClick={() => { setEditingNextAction(true); setTimeout(() => nextActionRef.current?.focus(), 50); }}>
-                  Edit
-                </button>
-              )}
-            </div>
-            {editingNextAction ? (
-              <input
-                ref={nextActionRef}
-                value={nextActionValue}
-                onChange={(e) => setNextActionValue(e.target.value)}
-                className="w-full rounded-md border bg-background p-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                onBlur={saveNextAction}
-                onKeyDown={(e) => { if (e.key === 'Enter') saveNextAction(); }}
-              />
-            ) : (
-              <p className="text-sm">{project.nextAction || <span className="text-muted-foreground italic">Not set</span>}</p>
-            )}
-          </div>
+          <EditableSection
+            label="Next Action"
+            value={project.nextAction}
+            onSave={(v) => editField('nextAction', 'Next Action', v, project.nextAction)}
+          />
         </div>
 
         {/* Right — Activity */}
@@ -237,10 +384,22 @@ export default function ProjectDetail() {
                 <Clock className="w-3 h-3" /> {relativeTime(project.lastActiveAt)}
               </span>
             </div>
-            <ActivityTimeline events={project.activityLog} />
+            <ActivityTimeline events={project.activityLog} onDeleteEvent={handleDeleteEvent} />
           </div>
         </div>
       </div>
+
+      {/* Archive confirm dialog */}
+      <Dialog open={confirmArchive} onOpenChange={setConfirmArchive}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Archive this project?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Archived projects are hidden from the main view but can be reactivated later.</p>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setConfirmArchive(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleArchive}>Archive</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ContextPromptDrawer project={project} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </Layout>

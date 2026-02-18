@@ -14,24 +14,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Shield, Trash2, Puzzle, Copy, Settings, Database, Sparkles, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import {
   getConfig,
   setConfig,
   clearConfig,
-  maskKey,
-  getEnabledProviders,
   PROVIDER_LABELS,
   type AiProvider,
   type CpConfig,
 } from '@/lib/configStore';
+import { AiProviderSettings } from '@/components/AiProviderSettings';
 
 const EDGE_FUNCTION_URL = `https://sdjdzvcwfcdtngknrasp.supabase.co/functions/v1/capture-extension`;
 
@@ -69,13 +61,6 @@ export default function SettingsPage({ onOpenWizard }: SettingsPageProps) {
     toast.success('URL copied');
   };
 
-  const handlePrimaryChange = (value: string) => {
-    if (!config) return;
-    const updated: CpConfig = { ...config, ai: { ...config.ai, primaryProvider: value as AiProvider } };
-    setConfig(updated);
-    toast.success(`Primary provider set to ${PROVIDER_LABELS[value as AiProvider]}`);
-  };
-
   const handleSaveKey = () => {
     if (!config || !editingKey || !editKeyValue) return;
     const updated: CpConfig = {
@@ -84,7 +69,7 @@ export default function SettingsPage({ onOpenWizard }: SettingsPageProps) {
         ...config.ai,
         providers: {
           ...config.ai.providers,
-          [editingKey]: { apiKey: editKeyValue },
+          [editingKey]: { ...config.ai.providers[editingKey], apiKey: editKeyValue },
         },
       },
     };
@@ -94,8 +79,6 @@ export default function SettingsPage({ onOpenWizard }: SettingsPageProps) {
     setShowEditKey(false);
     toast.success(`${PROVIDER_LABELS[editingKey]} key updated`);
   };
-
-  const enabledProviders = config ? getEnabledProviders(config) : [];
 
   return (
     <Layout>
@@ -127,51 +110,14 @@ export default function SettingsPage({ onOpenWizard }: SettingsPageProps) {
                     <Sparkles className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">AI Providers</span>
                   </div>
-                  {enabledProviders.map((p) => (
-                    <div key={p} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">{PROVIDER_LABELS[p]}</span>
-                        {p === config.ai.primaryProvider && (
-                          <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">Primary</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs font-mono text-muted-foreground">
-                          {maskKey(config.ai.providers[p]?.apiKey ?? '')}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 w-7 p-0"
-                          onClick={() => {
-                            setEditingKey(p);
-                            setEditKeyValue('');
-                            setShowEditKey(false);
-                          }}
-                        >
-                          <Eye className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {enabledProviders.length > 1 && (
-                    <div className="pt-2 border-t border-border">
-                      <Label className="text-xs text-muted-foreground">Primary Provider</Label>
-                      <Select value={config.ai.primaryProvider} onValueChange={handlePrimaryChange}>
-                        <SelectTrigger className="mt-1 h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {enabledProviders.map((p) => (
-                            <SelectItem key={p} value={p} className="text-xs">
-                              {PROVIDER_LABELS[p]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                  <AiProviderSettings
+                    config={config}
+                    onEditKey={(p) => {
+                      setEditingKey(p);
+                      setEditKeyValue('');
+                      setShowEditKey(false);
+                    }}
+                  />
                 </div>
 
                 <div className="flex gap-2">
