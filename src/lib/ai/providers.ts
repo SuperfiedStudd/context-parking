@@ -13,8 +13,9 @@ const SYSTEM_PROMPT =
 export async function summarizeWithOpenAI(
   text: string,
   apiKey: string,
-  model = 'gpt-4o-mini',
+  model = 'gpt-4.1-mini',
 ): Promise<SummarizeResult> {
+  console.log('Using model:', model);
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -50,8 +51,9 @@ export async function summarizeWithOpenAI(
 export async function summarizeWithAnthropic(
   text: string,
   apiKey: string,
-  model = 'claude-3-5-sonnet-latest',
+  model = 'claude-4-sonnet',
 ): Promise<SummarizeResult> {
+  console.log('Using model:', model);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -90,6 +92,7 @@ export async function summarizeWithGoogle(
   apiKey: string,
   model = 'gemini-2.0-flash',
 ): Promise<SummarizeResult> {
+  console.log('Using model:', model);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const res = await fetch(url, {
