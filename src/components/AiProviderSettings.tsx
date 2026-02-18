@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   Select,
   SelectContent,
@@ -9,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Eye } from 'lucide-react';
 import {
-  getConfig,
   setConfig,
   maskKey,
   getEnabledProviders,
@@ -17,7 +17,7 @@ import {
   type AiProvider,
   type CpConfig,
 } from '@/lib/configStore';
-import { PROVIDER_MODELS, DEFAULT_MODELS, getModelLabel } from '@/lib/ai/models';
+import { PROVIDER_MODELS, DEFAULT_MODELS, getModelLabel, resolveModel } from '@/lib/ai/models';
 import { toast } from 'sonner';
 
 interface Props {
@@ -29,7 +29,29 @@ interface Props {
 export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props) {
   const enabledProviders = getEnabledProviders(config);
 
+  // Local state for immediate UI updates
+  const [selectedModels, setSelectedModels] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    for (const p of enabledProviders) {
+      initial[p] = resolveModel(p, config.ai.providers[p]?.model);
+    }
+    return initial;
+  });
+
+  const [primaryProvider, setPrimaryProvider] = useState(config.ai.primaryProvider);
+
+  // Sync when config prop changes from parent
+  useEffect(() => {
+    const updated: Record<string, string> = {};
+    for (const p of enabledProviders) {
+      updated[p] = resolveModel(p, config.ai.providers[p]?.model);
+    }
+    setSelectedModels(updated);
+    setPrimaryProvider(config.ai.primaryProvider);
+  }, [config]);
+
   const handlePrimaryChange = (value: string) => {
+    setPrimaryProvider(value as AiProvider);
     const updated: CpConfig = { ...config, ai: { ...config.ai, primaryProvider: value as AiProvider } };
     setConfig(updated);
     onConfigChange?.();
@@ -37,6 +59,7 @@ export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props)
   };
 
   const handleModelChange = (provider: AiProvider, modelId: string) => {
+    setSelectedModels((prev) => ({ ...prev, [provider]: modelId }));
     const updated: CpConfig = {
       ...config,
       ai: {
@@ -55,7 +78,7 @@ export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props)
   return (
     <div className="space-y-3">
       {enabledProviders.map((p) => {
-        const currentModel = config.ai.providers[p]?.model || DEFAULT_MODELS[p];
+        const currentModel = selectedModels[p] || DEFAULT_MODELS[p];
         const models = PROVIDER_MODELS[p];
 
         return (
@@ -63,7 +86,7 @@ export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props)
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{PROVIDER_LABELS[p]}</span>
-                {p === config.ai.primaryProvider && (
+                {p === primaryProvider && (
                   <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">Primary</span>
                 )}
               </div>
@@ -86,10 +109,10 @@ export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props)
             <div>
               <Label className="text-xs text-muted-foreground">Model</Label>
               <Select value={currentModel} onValueChange={(v) => handleModelChange(p, v)}>
-                <SelectTrigger className="mt-1 h-8 text-xs">
+                <SelectTrigger className="mt-1 h-8 text-xs bg-background">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover z-50">
                   {models.map((m) => (
                     <SelectItem key={m.id} value={m.id} className="text-xs">
                       <div className="flex items-center gap-2">
@@ -110,11 +133,11 @@ export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props)
       {enabledProviders.length > 1 && (
         <div className="pt-2 border-t border-border">
           <Label className="text-xs text-muted-foreground">Primary Provider</Label>
-          <Select value={config.ai.primaryProvider} onValueChange={handlePrimaryChange}>
-            <SelectTrigger className="mt-1 h-8 text-xs">
+          <Select value={primaryProvider} onValueChange={handlePrimaryChange}>
+            <SelectTrigger className="mt-1 h-8 text-xs bg-background">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-popover z-50">
               {enabledProviders.map((p) => (
                 <SelectItem key={p} value={p} className="text-xs">
                   {PROVIDER_LABELS[p]}
