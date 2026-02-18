@@ -12,7 +12,7 @@ export interface SummarizeResponse extends SummarizeResult {
   latency_ms: number;
 }
 
-import { DEFAULT_MODELS } from './models';
+import { resolveModel } from './models';
 
 const PROVIDER_FN: Record<
   AiProvider,
@@ -40,7 +40,7 @@ export async function summarize(text: string): Promise<SummarizeResponse> {
     const key = providerConfig?.apiKey;
     if (!key) continue;
 
-    const model = providerConfig?.model || DEFAULT_MODELS[provider];
+    const model = resolveModel(provider, providerConfig?.model);
     const fn = PROVIDER_FN[provider];
     const start = Date.now();
 
