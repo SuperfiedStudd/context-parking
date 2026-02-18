@@ -128,7 +128,7 @@ export default function Capture() {
       drafts: [],
       nextAction: cap.next_action || '',
       lastActiveAt: new Date().toISOString(),
-      activityLog: [{ id: generateId(), type: 'created', description: `Promoted from ${cap.source} capture`, timestamp: new Date().toISOString() }],
+      activityLog: [{ id: generateId(), type: 'created', description: `Promoted from ${cap.source} capture${cap.ai_provider && cap.ai_model ? ` (via ${cap.ai_model} on ${cap.ai_provider})` : ''}`, timestamp: new Date().toISOString() }],
     };
     addProject(newProject);
     try {
