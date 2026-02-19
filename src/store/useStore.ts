@@ -39,7 +39,7 @@ export const useStore = create<AppState>()(
       projects: seedProjects,
       captures: [],
       storeRawTranscripts: false,
-      filter: 'all',
+      filter: 'active',
       viewMode: 'list',
       searchQuery: '',
 
