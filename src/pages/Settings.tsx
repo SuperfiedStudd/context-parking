@@ -14,7 +14,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Shield, Trash2, Puzzle, Copy, Settings, Database, Sparkles, Eye, EyeOff, RotateCcw } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Shield, Trash2, Puzzle, Copy, Settings, Database, Sparkles, Eye, EyeOff, RotateCcw, ChevronDown } from 'lucide-react';
 import {
   getConfig,
   setConfig,
@@ -38,10 +43,12 @@ export default function SettingsPage({ onOpenWizard }: SettingsPageProps) {
   const [config, setLocalConfig] = useState(() => getConfig());
   const refreshConfig = () => setLocalConfig(getConfig());
 
-  // Editable AI keys
   const [editingKey, setEditingKey] = useState<AiProvider | null>(null);
   const [editKeyValue, setEditKeyValue] = useState('');
   const [showEditKey, setShowEditKey] = useState(false);
+
+  const [extensionOpen, setExtensionOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const handleClear = () => {
     clearAllData();
@@ -143,34 +150,6 @@ export default function SettingsPage({ onOpenWizard }: SettingsPageProps) {
             )}
           </div>
 
-          {/* Extension Setup */}
-          <div className="bg-card border rounded-lg p-4 card-shadow">
-            <div className="flex items-center gap-2 mb-3">
-              <Puzzle className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">Browser Extension Setup</span>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <Label className="text-xs text-muted-foreground">Edge Function URL</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input readOnly value={EDGE_FUNCTION_URL} className="text-xs font-mono" />
-                  <Button size="sm" variant="secondary" onClick={copyUrl}>
-                    <Copy className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p className="font-medium text-foreground">Quick start:</p>
-                <ol className="list-decimal list-inside space-y-0.5">
-                  <li>Generate a key: <code className="bg-muted px-1 rounded">openssl rand -hex 32</code></li>
-                  <li>Add it as <code className="bg-muted px-1 rounded">EXTENSION_SHARED_KEY</code> in Supabase Edge Function secrets</li>
-                  <li>Load <code className="bg-muted px-1 rounded">browser-extension/</code> as an unpacked extension in Chrome</li>
-                  <li>Enter the URL and key in the extension popup</li>
-                </ol>
-              </div>
-            </div>
-          </div>
-
           {/* Store Raw Transcripts */}
           <div className="bg-card border rounded-lg p-4 card-shadow">
             <div className="flex items-center justify-between">
@@ -205,8 +184,56 @@ export default function SettingsPage({ onOpenWizard }: SettingsPageProps) {
               </Button>
             </div>
           </div>
-          {/* System Status Debug */}
-          <SystemStatusPanel />
+
+          {/* Browser Extension Setup — collapsible */}
+          <Collapsible open={extensionOpen} onOpenChange={setExtensionOpen}>
+            <div className="bg-card border rounded-lg card-shadow">
+              <CollapsibleTrigger className="w-full flex items-center justify-between p-4 text-left">
+                <div className="flex items-center gap-2">
+                  <Puzzle className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">Browser Extension Setup</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${extensionOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-4 pb-4 space-y-3 border-t pt-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Edge Function URL</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input readOnly value={EDGE_FUNCTION_URL} className="text-xs font-mono" />
+                      <Button size="sm" variant="secondary" onClick={copyUrl}>
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium text-foreground">Quick start:</p>
+                    <ol className="list-decimal list-inside space-y-0.5">
+                      <li>Generate a key: <code className="bg-muted px-1 rounded">openssl rand -hex 32</code></li>
+                      <li>Add it as <code className="bg-muted px-1 rounded">EXTENSION_SHARED_KEY</code> in Supabase Edge Function secrets</li>
+                      <li>Load <code className="bg-muted px-1 rounded">browser-extension/</code> as an unpacked extension in Chrome</li>
+                      <li>Enter the URL and key in the extension popup</li>
+                    </ol>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
+
+          {/* Advanced / Debug — collapsible */}
+          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+            <div className="bg-card border rounded-lg card-shadow">
+              <CollapsibleTrigger className="w-full flex items-center justify-between p-4 text-left">
+                <span className="text-sm font-medium text-muted-foreground">Advanced</span>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${advancedOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-4 pb-4 border-t pt-3">
+                  <SystemStatusPanel />
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
         </div>
 
         {/* Clear data dialog */}

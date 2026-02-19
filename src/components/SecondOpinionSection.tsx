@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Project } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -410,8 +411,8 @@ export function SecondOpinionSection({ project }: Props) {
                           <strong>Instruction:</strong> {op.instruction}
                         </div>
                       )}
-                      <div className="text-sm bg-background rounded-md p-3 border whitespace-pre-wrap max-h-96 overflow-y-auto">
-                        {op.response}
+                      <div className="text-sm bg-background rounded-md p-3 border max-h-96 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown>{op.response}</ReactMarkdown>
                       </div>
                     </div>
                   </CollapsibleContent>
