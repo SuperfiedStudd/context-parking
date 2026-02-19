@@ -4,6 +4,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare const chrome: any;
 
+import { resolveModel } from '@/lib/ai/models';
+
 export type AiProvider = 'openai' | 'anthropic' | 'google';
 
 export interface ProviderConfig {
@@ -77,7 +79,8 @@ export function syncConfigToExtension(config?: CpConfig | null): boolean {
   const apiKey = providerConfig?.apiKey;
   if (!cfg.supabase?.url || !provider || !apiKey) return false;
 
-  const model = providerConfig?.model || '';
+  // Always store resolved model — never empty string
+  const model = resolveModel(provider, providerConfig?.model);
 
   try {
     // Attempt chrome.storage.local (only works if extension context is available)
