@@ -28,10 +28,17 @@ export interface CpConfig {
   };
 }
 
-const STORAGE_KEY = 'cp_config_v1';
-const EXTENSION_CONFIG_KEY = 'cp_full_config';
+export interface SyncAckResult {
+  ok: boolean;
+  provider?: string;
+  model?: string;
+  timestamp?: string;
+  error?: string;
+}
 
-/** Strip any path after the base Supabase domain (e.g. /functions/v1/...) */
+const STORAGE_KEY = 'cp_config_v1';
+
+/** Strip any path after the base Supabase domain */
 export function sanitizeSupabaseUrl(url: string): string {
   try {
     const u = new URL(url);
@@ -46,7 +53,6 @@ export function getConfig(): CpConfig | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CpConfig;
-    // Auto-migrate: sanitize stored URL
     if (parsed?.supabase?.url) {
       parsed.supabase.url = sanitizeSupabaseUrl(parsed.supabase.url);
     }
@@ -62,68 +68,93 @@ export function setConfig(config: CpConfig): void {
     config.supabase.url = sanitizeSupabaseUrl(config.supabase.url);
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-  // Auto-sync to extension
-  syncConfigToExtension(config);
 }
 
 /**
- * Sync config to browser extension.
- * Writes the full config object to chrome.storage.local under a single key,
- * and fires a runtime message so popup/background can react immediately.
- * No content script injection required.
+ * Sync config to browser extension via chrome.runtime.sendMessage SYNC_CONFIG.
+ * Extension background responds with SYNC_ACK containing stored values.
+ * Returns a promise that resolves with the ACK result.
  */
-export function syncConfigToExtension(config?: CpConfig | null): boolean {
+export async function syncConfigToExtension(config?: CpConfig | null): Promise<SyncAckResult> {
   const cfg = config ?? getConfig();
-  if (!cfg) return false;
+  if (!cfg) return { ok: false, error: 'No config' };
 
   const provider = cfg.ai.primaryProvider;
   const providerConfig = cfg.ai.providers[provider];
   const apiKey = providerConfig?.apiKey;
-  if (!cfg.supabase?.url || !provider || !apiKey) return false;
+  if (!cfg.supabase?.url || !provider || !apiKey) {
+    return { ok: false, error: 'Incomplete config' };
+  }
 
-  // Always store resolved model — never empty string
   const model = resolveModel(provider, providerConfig?.model);
 
-  // Build the extension payload — flat structure for easy reading
-  const extensionPayload = {
-    cpConfigSynced: true,
-    cpSupabaseUrl: cfg.supabase.url,
-    cpProvider: provider,
-    cpApiKey: apiKey,
-    cpModel: model,
-    cpSyncTimestamp: new Date().toISOString(),
-  };
-
   try {
-    // Write directly to chrome.storage.local if available
-    if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
-      chrome.storage.local.set(extensionPayload);
-    }
-
-    // Also try sending a runtime message to the extension
     if (typeof chrome !== 'undefined' && chrome?.runtime?.sendMessage) {
-      try {
-        chrome.runtime.sendMessage(extensionPayload);
-      } catch {
-        // Extension not installed or not listening — ok
+      const ack = await new Promise<SyncAckResult>((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve({ ok: false, error: 'Extension not responding (timeout)' });
+        }, 3000);
+
+        try {
+          chrome.runtime.sendMessage(
+            {
+              type: 'SYNC_CONFIG',
+              payload: {
+                supabaseUrl: cfg.supabase.url,
+                provider,
+                apiKey,
+                model,
+              },
+            },
+            (response: any) => {
+              clearTimeout(timeout);
+              if (chrome.runtime.lastError) {
+                resolve({ ok: false, error: chrome.runtime.lastError.message || 'Extension unavailable' });
+                return;
+              }
+              if (response?.type === 'SYNC_ACK' && response.ok) {
+                resolve({
+                  ok: true,
+                  provider: response.provider,
+                  model: response.model,
+                  timestamp: response.timestamp,
+                });
+              } else {
+                resolve({ ok: false, error: response?.error || 'Bad ACK' });
+              }
+            }
+          );
+        } catch {
+          clearTimeout(timeout);
+          resolve({ ok: false, error: 'sendMessage failed' });
+        }
+      });
+
+      if (ack.ok) {
+        localStorage.setItem('cp_extension_last_sync', JSON.stringify(ack));
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[ConfigSync] ACK received:', ack);
+        }
       }
+
+      return ack;
     }
 
-    // Store sync timestamp locally so Settings UI can display it
-    localStorage.setItem('cp_extension_last_sync', new Date().toISOString());
-
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('[ConfigSync] Synced to extension:', { provider, model });
-    }
-
-    return true;
+    return { ok: false, error: 'chrome.runtime not available' };
   } catch {
-    return false;
+    return { ok: false, error: 'Sync exception' };
   }
 }
 
-export function getExtensionLastSync(): string | null {
-  return localStorage.getItem('cp_extension_last_sync');
+/** Get the last sync ACK result */
+export function getExtensionLastSync(): SyncAckResult | null {
+  try {
+    const raw = localStorage.getItem('cp_extension_last_sync');
+    if (!raw) return null;
+    return JSON.parse(raw) as SyncAckResult;
+  } catch {
+    return null;
+  }
 }
 
 export function clearConfig(): void {
@@ -132,22 +163,15 @@ export function clearConfig(): void {
 
 export function isValidConfig(config: any): config is CpConfig {
   if (!config || typeof config !== 'object') return false;
-
-  // Validate supabase
   if (!config.supabase?.url || !config.supabase?.anonKey) return false;
   if (!config.supabase.url.startsWith('https://') || !config.supabase.url.includes('.supabase.co')) return false;
-
-  // Validate AI
   if (!config.ai?.providers || typeof config.ai.providers !== 'object') return false;
   const providers = config.ai.providers;
   const enabledProviders = (['openai', 'anthropic', 'google'] as AiProvider[]).filter(
     (p) => providers[p]?.apiKey && providers[p]!.apiKey.length > 0
   );
   if (enabledProviders.length === 0) return false;
-
-  // Validate primary provider is among enabled
   if (!config.ai.primaryProvider || !enabledProviders.includes(config.ai.primaryProvider)) return false;
-
   return true;
 }
 
