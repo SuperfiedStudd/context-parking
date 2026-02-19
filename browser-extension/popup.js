@@ -107,6 +107,7 @@ modalConfirm.addEventListener("click", async () => {
             user_intent: userIntent || undefined,
           };
 
+          console.log("[Extension Capture] Using:", config.cpProvider, config.cpModel);
           console.log("[Extension Capture] Sending:", {
             provider: requestBody.provider,
             model: requestBody.model || "(default)",
