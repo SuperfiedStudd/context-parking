@@ -73,7 +73,7 @@ export class ProviderUnavailableError extends Error {
 export async function summarizeWithAnthropic(
   text: string,
   apiKey: string,
-  model = 'claude-4-sonnet',
+  model = 'claude-sonnet-4-20250514',
 ): Promise<SummarizeResult> {
   console.log('[Providers] Anthropic using model:', model);
   const res = await fetch('https://api.anthropic.com/v1/messages', {

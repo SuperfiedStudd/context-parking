@@ -16,12 +16,9 @@ export const PROVIDER_MODELS: Record<AiProvider, AiModel[]> = {
     { id: 'o3', label: 'o3', description: 'Strong reasoning' },
   ],
   anthropic: [
-    { id: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku', description: 'Fast & cheap' },
-    { id: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet', description: 'Balanced' },
-    { id: 'claude-3-opus-20240229', label: 'Claude 3 Opus', description: 'Most capable Claude 3' },
-    { id: 'claude-3.5-sonnet-latest', label: 'Claude 3.5 Sonnet', description: 'Improved Sonnet' },
-    { id: 'claude-4-sonnet', label: 'Claude 4 Sonnet', description: 'Next gen balanced' },
-    { id: 'claude-4-opus', label: 'Claude 4 Opus', description: 'Next gen flagship' },
+    { id: 'claude-haiku-4-5-20250514', label: 'Claude Haiku 4.5', description: 'Fast & affordable' },
+    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', description: 'Balanced' },
+    { id: 'claude-opus-4-20250514', label: 'Claude Opus 4', description: 'Most capable' },
   ],
   google: [
     { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', description: 'Fast' },
@@ -33,7 +30,7 @@ export const PROVIDER_MODELS: Record<AiProvider, AiModel[]> = {
 
 export const DEFAULT_MODELS: Record<AiProvider, string> = {
   openai: 'gpt-4.1-mini',
-  anthropic: 'claude-4-sonnet',
+  anthropic: 'claude-sonnet-4-20250514',
   google: 'gemini-2.0-flash',
 };
 
