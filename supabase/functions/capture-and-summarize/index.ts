@@ -73,20 +73,25 @@ const DEFAULT_MODELS: Record<Provider, string> = {
 };
 
 async function callOpenAI(text: string, apiKey: string, model: string, systemPrompt: string) {
+  const isReasoning = /^o\d/.test(model);
+  const body: Record<string, unknown> = {
+    model,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: text },
+    ],
+  };
+  if (!isReasoning) {
+    body.temperature = 0.2;
+  }
+
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: text },
-      ],
-      temperature: 0.2,
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
