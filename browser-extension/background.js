@@ -5,7 +5,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "SYNC_CONFIG" && message.config) {
     const config = message.config;
     const provider = config.ai?.primaryProvider;
-    const apiKey = config.ai?.providers?.[provider]?.apiKey;
+    const providerConfig = config.ai?.providers?.[provider];
+    const apiKey = providerConfig?.apiKey;
 
     if (!config.supabase?.url || !provider || !apiKey) return;
 
@@ -23,6 +24,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       cpSupabaseUrl: baseUrl,
       cpProvider: provider,
       cpApiKey: apiKey,
+      cpModel: providerConfig?.model || "",
+      cpSyncTimestamp: new Date().toISOString(),
     });
   }
 });

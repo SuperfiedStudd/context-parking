@@ -33,3 +33,8 @@ window.addEventListener("storage", (e) => {
     trySync();
   }
 });
+
+// Listen for custom event fired by configStore.setConfig()
+window.addEventListener("cp-config-updated", () => {
+  trySync();
+});

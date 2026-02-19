@@ -13,12 +13,16 @@ import {
   setConfig,
   maskKey,
   getEnabledProviders,
+  syncConfigToExtension,
+  getExtensionLastSync,
   PROVIDER_LABELS,
   type AiProvider,
   type CpConfig,
 } from '@/lib/configStore';
 import { PROVIDER_MODELS, DEFAULT_MODELS, getModelLabel, resolveModel } from '@/lib/ai/models';
 import { toast } from 'sonner';
+import { RefreshCw, Clock } from 'lucide-react';
+import { relativeTime } from '@/lib/helpers';
 
 interface Props {
   config: CpConfig;
@@ -147,6 +151,37 @@ export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props)
           </Select>
         </div>
       )}
+
+      {/* Extension sync indicator */}
+      <ExtensionSyncStatus config={config} />
+    </div>
+  );
+}
+
+function ExtensionSyncStatus({ config }: { config: CpConfig }) {
+  const [lastSync, setLastSync] = useState(getExtensionLastSync());
+
+  const handleSync = () => {
+    const ok = syncConfigToExtension(config);
+    if (ok) {
+      setLastSync(new Date().toISOString());
+      toast.success('Config synced to extension');
+    } else {
+      toast.error('Sync failed — check that config is complete');
+    }
+  };
+
+  return (
+    <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Clock className="w-3 h-3" />
+        <span>
+          {lastSync ? `Last synced: ${relativeTime(lastSync)}` : 'Not synced to extension yet'}
+        </span>
+      </div>
+      <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleSync}>
+        <RefreshCw className="w-3 h-3" /> Sync to Extension
+      </Button>
     </div>
   );
 }

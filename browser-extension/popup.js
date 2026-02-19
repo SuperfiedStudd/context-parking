@@ -9,10 +9,11 @@ const charCount = document.getElementById("charCount");
 
 // Check if config has been synced from the web app
 chrome.storage.local.get(
-  ["cpConfigSynced", "cpSupabaseUrl", "cpProvider", "cpApiKey"],
+  ["cpConfigSynced", "cpSupabaseUrl", "cpProvider", "cpApiKey", "cpModel"],
   (data) => {
     if (data.cpConfigSynced && data.cpSupabaseUrl && data.cpProvider && data.cpApiKey) {
-      configStatusEl.textContent = `✓ Connected · ${providerLabel(data.cpProvider)}`;
+      const modelInfo = data.cpModel ? ` · ${data.cpModel}` : "";
+      configStatusEl.textContent = `✓ Connected · ${providerLabel(data.cpProvider)}${modelInfo}`;
       configStatusEl.className = "config-status connected";
       captureBtn.disabled = false;
     } else {
@@ -48,8 +49,9 @@ modalConfirm.addEventListener("click", async () => {
   const userIntent = focusField.value.trim().substring(0, 300);
   modal.style.display = "none";
 
+  // Always read fresh config at capture time
   chrome.storage.local.get(
-    ["cpSupabaseUrl", "cpProvider", "cpApiKey"],
+    ["cpSupabaseUrl", "cpProvider", "cpApiKey", "cpModel"],
     async (config) => {
       if (!config.cpSupabaseUrl || !config.cpProvider || !config.cpApiKey) {
         setStatus("Config not synced. Visit your Context Parking app first.", "error");
