@@ -28,6 +28,8 @@ import {
   type SecondOpinionRecord,
 } from '@/lib/api/secondOpinions';
 import { useStore } from '@/store/useStore';
+import { getConfig, PROVIDER_LABELS } from '@/lib/configStore';
+import { resolveModel, getModelLabel } from '@/lib/ai/models';
 
 interface ContextField {
   key: string;
@@ -240,7 +242,8 @@ export function SecondOpinionSection({ project }: Props) {
         />
       </div>
 
-      {/* Run Button */}
+      {/* Provider/Model indicator + Run Button */}
+      <ProviderModelIndicator />
       <Button
         className="w-full gap-2"
         onClick={handleRun}
@@ -323,5 +326,27 @@ export function SecondOpinionSection({ project }: Props) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** Small indicator showing which provider/model will be used */
+function ProviderModelIndicator() {
+  const config = getConfig();
+  if (!config) {
+    return (
+      <p className="text-xs text-destructive">No AI provider configured. Complete setup in Settings.</p>
+    );
+  }
+
+  const provider = config.ai.primaryProvider;
+  const providerConfig = config.ai.providers[provider];
+  const model = resolveModel(provider, providerConfig?.model);
+  const enabledCount = Object.values(config.ai.providers).filter((p) => p?.apiKey).length;
+
+  return (
+    <p className="text-xs text-muted-foreground">
+      Will use: <span className="font-medium text-foreground">{PROVIDER_LABELS[provider]}</span> — <span className="font-medium text-foreground">{getModelLabel(provider, model)}</span>
+      {enabledCount > 1 && <span className="ml-1">(with fallback enabled)</span>}
+    </p>
   );
 }
