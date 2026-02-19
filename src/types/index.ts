@@ -44,7 +44,7 @@ export interface CaptureEvent {
   resolvedToProjectId?: string;
 }
 
-export type ProjectFilter = 'all' | 'active' | 'dormant' | 'unsent_drafts' | 'open_forks' | 'archived';
+export type ProjectFilter = 'active' | 'drafts' | 'archived';
 export type ViewMode = 'list' | 'grid';
 
 export interface DbCapture {
