@@ -1,9 +1,6 @@
 // Config store for Context Parking setup wizard
 // Persists to localStorage under "cp_config_v1"
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-declare const chrome: any;
-
 import { resolveModel } from '@/lib/ai/models';
 
 export type AiProvider = 'openai' | 'anthropic' | 'google';
@@ -89,58 +86,52 @@ export async function syncConfigToExtension(config?: CpConfig | null): Promise<S
   const model = resolveModel(provider, providerConfig?.model);
 
   try {
-    if (typeof chrome !== 'undefined' && chrome?.runtime?.id) {
-      const ack = await new Promise<SyncAckResult>((resolve) => {
-        const timeout = setTimeout(() => {
-          resolve({ ok: false, error: 'Extension not responding (timeout)' });
-        }, 3000);
+    const ack = await new Promise<SyncAckResult>((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve({ ok: false, error: 'Extension not responding (timeout)' });
+      }, 3000);
 
-        try {
-          chrome.runtime.sendMessage(
-            {
-              type: 'SYNC_CONFIG',
-              payload: {
-                supabaseUrl: cfg.supabase.url,
-                provider,
-                apiKey,
-                model,
-              },
-            },
-            (response: any) => {
-              clearTimeout(timeout);
-              if (chrome.runtime.lastError) {
-                resolve({ ok: false, error: chrome.runtime.lastError.message || 'Extension unavailable' });
-                return;
-              }
-              if (response?.type === 'SYNC_ACK' && response.ok) {
-                resolve({
-                  ok: true,
-                  provider: response.provider,
-                  model: response.model,
-                  timestamp: response.timestamp,
-                });
-              } else {
-                resolve({ ok: false, error: response?.error || 'Bad ACK' });
-              }
-            }
-          );
-        } catch {
-          clearTimeout(timeout);
-          resolve({ ok: false, error: 'sendMessage failed' });
+      // Listen for ACK from content script bridge
+      const handler = (event: MessageEvent) => {
+        if (event.source !== window || event.data?.type !== 'SYNC_ACK') return;
+        clearTimeout(timeout);
+        window.removeEventListener('message', handler);
+        if (event.data.ok) {
+          resolve({
+            ok: true,
+            provider: event.data.provider,
+            model: event.data.model,
+            timestamp: event.data.timestamp,
+          });
+        } else {
+          resolve({ ok: false, error: event.data.error || 'Bad ACK' });
         }
-      });
+      };
+      window.addEventListener('message', handler);
 
-      if (ack.ok) {
-        localStorage.setItem('cp_extension_last_sync', JSON.stringify(ack));
-        if (process.env.NODE_ENV === 'development') {
-          console.debug('[ConfigSync] ACK received:', ack);
-        }
+      // Send config via window.postMessage — picked up by config-sync.js content script
+      window.postMessage(
+        {
+          type: 'SYNC_CONFIG',
+          payload: {
+            supabaseUrl: cfg.supabase.url,
+            provider,
+            apiKey,
+            model,
+          },
+        },
+        '*'
+      );
+    });
+
+    if (ack.ok) {
+      localStorage.setItem('cp_extension_last_sync', JSON.stringify(ack));
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[ConfigSync] ACK received:', ack);
       }
-
-      return ack;
     }
 
-    return { ok: false, error: 'chrome.runtime not available' };
+    return ack;
   } catch {
     return { ok: false, error: 'Sync exception' };
   }
