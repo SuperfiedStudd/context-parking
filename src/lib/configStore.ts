@@ -86,16 +86,21 @@ export async function syncConfigToExtension(config?: CpConfig | null): Promise<S
   const model = resolveModel(provider, providerConfig?.model);
 
   try {
+    console.log('[WebApp] Sending SYNC_CONFIG via postMessage', { provider, model });
+
     const ack = await new Promise<SyncAckResult>((resolve) => {
       const timeout = setTimeout(() => {
-        resolve({ ok: false, error: 'Extension not responding (timeout)' });
-      }, 3000);
+        console.warn('[WebApp] SYNC_CONFIG timeout after 5s');
+        window.removeEventListener('message', handler);
+        resolve({ ok: false, error: 'Extension not responding (timeout). Is the extension installed and enabled?' });
+      }, 5000);
 
       // Listen for ACK from content script bridge
-      const handler = (event: MessageEvent) => {
+      function handler(event: MessageEvent) {
         if (event.source !== window || event.data?.type !== 'SYNC_ACK') return;
         clearTimeout(timeout);
         window.removeEventListener('message', handler);
+        console.log('[WebApp] SYNC_ACK received:', event.data);
         if (event.data.ok) {
           resolve({
             ok: true,
@@ -106,7 +111,7 @@ export async function syncConfigToExtension(config?: CpConfig | null): Promise<S
         } else {
           resolve({ ok: false, error: event.data.error || 'Bad ACK' });
         }
-      };
+      }
       window.addEventListener('message', handler);
 
       // Send config via window.postMessage — picked up by config-sync.js content script
