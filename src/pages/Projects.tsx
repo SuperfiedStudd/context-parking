@@ -8,11 +8,10 @@ import { relativeTime } from '@/lib/helpers';
 import { useNavigate } from 'react-router-dom';
 
 const filters: { key: ProjectFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
   { key: 'active', label: 'Active' },
+  { key: 'all', label: 'All' },
   { key: 'dormant', label: 'Dormant' },
   { key: 'unsent_drafts', label: 'Unsent Drafts' },
-  { key: 'open_forks', label: 'Open Forks' },
   { key: 'archived', label: 'Archived' },
 ];
 
