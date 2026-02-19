@@ -3,7 +3,7 @@ import { relativeTime } from '@/lib/helpers';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, FileText, GitBranch, Bell, ArrowRight } from 'lucide-react';
+import { Clock, FileText, Bell, ArrowRight } from 'lucide-react';
 
 interface ProjectCardProps {
   project: Project;
@@ -14,7 +14,6 @@ export function ProjectCard({ project, viewMode }: ProjectCardProps) {
   const navigate = useNavigate();
   const readyDrafts = project.drafts.filter((d) => d.status === 'Ready').length;
   const draftCount = project.drafts.length;
-  const forkCount = (project.strategicForks || []).length;
   const hasReminder = !!project.reminderAt;
 
   if (viewMode === 'grid') {
@@ -26,11 +25,6 @@ export function ProjectCard({ project, viewMode }: ProjectCardProps) {
         <h3 className="font-semibold text-sm mb-1 group-hover:text-primary transition-smooth">{project.title}</h3>
         <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{project.objective}</p>
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {forkCount > 0 && (
-            <Badge variant="secondary" className="text-xs gap-1">
-              <GitBranch className="w-3 h-3" /> {forkCount}
-            </Badge>
-          )}
           {draftCount > 0 && (
             <Badge variant="secondary" className="text-xs gap-1">
               <FileText className="w-3 h-3" /> {draftCount}
@@ -65,12 +59,7 @@ export function ProjectCard({ project, viewMode }: ProjectCardProps) {
         <h3 className="font-semibold text-sm group-hover:text-primary transition-smooth">{project.title}</h3>
         <p className="text-xs text-muted-foreground truncate mt-0.5">{project.objective}</p>
       </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0">
-        {forkCount > 0 && (
-          <Badge variant="secondary" className="text-xs gap-1">
-            <GitBranch className="w-3 h-3" /> {forkCount}
-          </Badge>
-        )}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
         {draftCount > 0 && (
           <Badge variant="secondary" className="text-xs gap-1">
             <FileText className="w-3 h-3" /> {draftCount}
