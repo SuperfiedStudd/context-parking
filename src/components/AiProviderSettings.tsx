@@ -18,11 +18,11 @@ import {
   PROVIDER_LABELS,
   type AiProvider,
   type CpConfig,
+  type SyncAckResult,
 } from '@/lib/configStore';
 import { PROVIDER_MODELS, DEFAULT_MODELS, getModelLabel, resolveModel } from '@/lib/ai/models';
 import { toast } from 'sonner';
-import { RefreshCw, Clock } from 'lucide-react';
-import { relativeTime } from '@/lib/helpers';
+import { RefreshCw, Check, X } from 'lucide-react';
 
 interface Props {
   config: CpConfig;
@@ -33,7 +33,6 @@ interface Props {
 export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props) {
   const enabledProviders = getEnabledProviders(config);
 
-  // Local state for immediate UI updates
   const [selectedModels, setSelectedModels] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     for (const p of enabledProviders) {
@@ -44,7 +43,6 @@ export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props)
 
   const [primaryProvider, setPrimaryProvider] = useState(config.ai.primaryProvider);
 
-  // Sync when config prop changes from parent
   useEffect(() => {
     const updated: Record<string, string> = {};
     for (const p of enabledProviders) {
@@ -109,7 +107,6 @@ export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props)
               </div>
             </div>
 
-            {/* Model selector */}
             <div>
               <Label className="text-xs text-muted-foreground">Model</Label>
               <Select value={currentModel} onValueChange={(v) => handleModelChange(p, v)}>
@@ -152,36 +149,61 @@ export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props)
         </div>
       )}
 
-      {/* Extension sync indicator */}
       <ExtensionSyncStatus config={config} key={primaryProvider + JSON.stringify(selectedModels)} />
     </div>
   );
 }
 
 function ExtensionSyncStatus({ config }: { config: CpConfig }) {
-  const [lastSync, setLastSync] = useState(getExtensionLastSync());
+  const [syncResult, setSyncResult] = useState<SyncAckResult | null>(getExtensionLastSync());
+  const [syncing, setSyncing] = useState(false);
 
-  const handleSync = () => {
-    const ok = syncConfigToExtension(config);
-    if (ok) {
-      setLastSync(new Date().toISOString());
-      toast.success('Config synced to extension');
-    } else {
-      toast.error('Sync failed — check that config is complete');
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const ack = await syncConfigToExtension(config);
+      setSyncResult(ack);
+      if (ack.ok) {
+        toast.success(`Synced: ${ack.provider} / ${ack.model}`);
+      } else {
+        toast.error(`Sync failed: ${ack.error}`);
+      }
+    } finally {
+      setSyncing(false);
     }
   };
 
   return (
-    <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Clock className="w-3 h-3" />
-        <span>
-          {lastSync ? `Last synced: ${relativeTime(lastSync)}` : 'Not synced to extension yet'}
-        </span>
+    <div className="pt-2 border-t border-border space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {syncResult?.ok ? (
+            <>
+              <Check className="w-3 h-3 text-primary" />
+              <span>
+                Synced: <span className="font-medium text-foreground">{syncResult.provider}</span> / <span className="font-medium text-foreground">{syncResult.model}</span>
+              </span>
+            </>
+          ) : syncResult ? (
+            <>
+              <X className="w-3 h-3 text-destructive" />
+              <span>Sync failed: {syncResult.error}</span>
+            </>
+          ) : (
+            <span>Not synced to extension yet</span>
+          )}
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 gap-1 text-xs"
+          onClick={handleSync}
+          disabled={syncing}
+        >
+          <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
+          {syncing ? 'Syncing…' : 'Sync to Extension'}
+        </Button>
       </div>
-      <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleSync}>
-        <RefreshCw className="w-3 h-3" /> Sync to Extension
-      </Button>
     </div>
   );
 }

@@ -1,42 +1,54 @@
 // background.js — Service worker for Context Parking extension.
-// Config is written directly to chrome.storage.local by the web app
-// (when chrome.storage is available) or via SYNC_CONFIG messages from config-sync.js.
-// No content script dependency for config sync.
+// Handles SYNC_CONFIG messages: writes config to storage, responds with SYNC_ACK.
 
-// Default models — must match src/lib/ai/models.ts
 const DEFAULT_MODELS = {
   openai: "gpt-4.1-mini",
   anthropic: "claude-4-sonnet",
   google: "gemini-2.0-flash",
 };
 
-// Handle SYNC_CONFIG messages from config-sync.js (legacy path, kept for compatibility)
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "SYNC_CONFIG" && message.config) {
-    const config = message.config;
-    const provider = config.ai?.primaryProvider;
-    const providerConfig = config.ai?.providers?.[provider];
-    const apiKey = providerConfig?.apiKey;
+  if (message.type === "SYNC_CONFIG" && message.payload) {
+    const { supabaseUrl, provider, apiKey, model } = message.payload;
 
-    if (!config.supabase?.url || !provider || !apiKey) return;
-
-    let baseUrl;
-    try {
-      const u = new URL(config.supabase.url);
-      baseUrl = `${u.protocol}//${u.host}`;
-    } catch {
-      baseUrl = config.supabase.url.replace(/\/functions.*$/, "").replace(/\/+$/, "");
+    if (!supabaseUrl || !provider || !apiKey) {
+      sendResponse({ type: "SYNC_ACK", ok: false, error: "Missing fields" });
+      return true;
     }
 
-    const resolvedModel = providerConfig?.model || DEFAULT_MODELS[provider] || "";
+    // Resolve base URL
+    let baseUrl;
+    try {
+      const u = new URL(supabaseUrl);
+      baseUrl = `${u.protocol}//${u.host}`;
+    } catch {
+      baseUrl = supabaseUrl.replace(/\/functions.*$/, "").replace(/\/+$/, "");
+    }
 
-    chrome.storage.local.set({
+    const resolvedModel = model || DEFAULT_MODELS[provider] || "";
+    const timestamp = new Date().toISOString();
+
+    const stored = {
       cpConfigSynced: true,
       cpSupabaseUrl: baseUrl,
       cpProvider: provider,
       cpApiKey: apiKey,
       cpModel: resolvedModel,
-      cpSyncTimestamp: new Date().toISOString(),
+      cpSyncTimestamp: timestamp,
+    };
+
+    chrome.storage.local.set(stored, () => {
+      // Respond with ACK containing the stored values
+      sendResponse({
+        type: "SYNC_ACK",
+        ok: true,
+        provider: stored.cpProvider,
+        model: stored.cpModel,
+        timestamp: stored.cpSyncTimestamp,
+      });
     });
+
+    // Return true to indicate async sendResponse
+    return true;
   }
 });

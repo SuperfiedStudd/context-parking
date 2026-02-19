@@ -7,41 +7,36 @@ const modalConfirm = document.getElementById("modal-confirm");
 const focusField = document.getElementById("focusField");
 const charCount = document.getElementById("charCount");
 
-const CONFIG_KEYS = ["cpConfigSynced", "cpSupabaseUrl", "cpProvider", "cpApiKey", "cpModel"];
+const CONFIG_KEYS = ["cpConfigSynced", "cpSupabaseUrl", "cpProvider", "cpApiKey", "cpModel", "cpSyncTimestamp"];
 
-// Read and display current config on popup open
-function refreshConfigStatus() {
-  chrome.storage.local.get(CONFIG_KEYS, (data) => {
-    if (data.cpConfigSynced && data.cpSupabaseUrl && data.cpProvider && data.cpApiKey) {
-      const modelInfo = data.cpModel ? ` · ${data.cpModel}` : "";
-      configStatusEl.textContent = `✓ Connected · ${providerLabel(data.cpProvider)}${modelInfo}`;
-      configStatusEl.className = "config-status connected";
-      captureBtn.disabled = false;
-    } else {
-      configStatusEl.innerHTML =
-        "⚠ Open your Context Parking app and complete the Setup Wizard to connect.";
-      configStatusEl.className = "config-status disconnected";
-      captureBtn.disabled = true;
-    }
-  });
+function renderConfigStatus(data) {
+  if (data.cpConfigSynced && data.cpSupabaseUrl && data.cpProvider && data.cpApiKey) {
+    const modelInfo = data.cpModel ? ` · ${data.cpModel}` : "";
+    configStatusEl.textContent = `✓ ${providerLabel(data.cpProvider)}${modelInfo}`;
+    configStatusEl.className = "config-status connected";
+    captureBtn.disabled = false;
+  } else {
+    configStatusEl.innerHTML =
+      "⚠ Open your Context Parking app and complete the Setup Wizard to connect.";
+    configStatusEl.className = "config-status disconnected";
+    captureBtn.disabled = true;
+  }
 }
 
-// Initial load
-refreshConfigStatus();
+// Initial load — read fresh from storage
+chrome.storage.local.get(CONFIG_KEYS, renderConfigStatus);
 
-// Re-check when storage changes (e.g. settings saved in web app)
+// Live updates when storage changes (from SYNC_CONFIG ACK writes)
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && CONFIG_KEYS.some((k) => k in changes)) {
-    refreshConfigStatus();
+    chrome.storage.local.get(CONFIG_KEYS, renderConfigStatus);
   }
 });
 
-// Character count for focus field
 focusField.addEventListener("input", () => {
   charCount.textContent = focusField.value.length;
 });
 
-// Show modal on capture click
 captureBtn.addEventListener("click", () => {
   document.querySelector('input[name="captureType"][value="structured"]').checked = true;
   focusField.value = "";
@@ -53,23 +48,23 @@ modalCancel.addEventListener("click", () => {
   modal.style.display = "none";
 });
 
-// Confirm capture from modal
 modalConfirm.addEventListener("click", async () => {
   const captureType = document.querySelector('input[name="captureType"]:checked').value;
   const userIntent = focusField.value.trim().substring(0, 300);
   modal.style.display = "none";
 
-  // Always read FRESH config from chrome.storage.local at moment of capture
+  // Read FRESH config from chrome.storage.local at moment of capture
   chrome.storage.local.get(CONFIG_KEYS, async (config) => {
     if (!config.cpSupabaseUrl || !config.cpProvider || !config.cpApiKey) {
       setStatus("Config not synced. Visit your Context Parking app first.", "error");
       return;
     }
 
-    console.log("[Extension Capture] Fresh config at capture time:", {
+    console.log("[Extension Capture] Fresh config:", {
       provider: config.cpProvider,
       model: config.cpModel || "(none)",
       supabaseUrl: config.cpSupabaseUrl,
+      syncTimestamp: config.cpSyncTimestamp,
     });
 
     setStatus("Capturing…", "capturing");
@@ -112,9 +107,9 @@ modalConfirm.addEventListener("click", async () => {
             user_intent: userIntent || undefined,
           };
 
-          console.log("[Extension Capture] Sending to edge:", {
+          console.log("[Extension Capture] Sending:", {
             provider: requestBody.provider,
-            model: requestBody.model || "(will use default)",
+            model: requestBody.model || "(default)",
             capture_type: requestBody.capture_type,
           });
 
@@ -130,12 +125,10 @@ modalConfirm.addEventListener("click", async () => {
           }
 
           const data = await res.json();
-          const latency = data.latency_ms
-            ? ` (${(data.latency_ms / 1000).toFixed(1)}s)`
-            : "";
+          const latency = data.latency_ms ? ` (${(data.latency_ms / 1000).toFixed(1)}s)` : "";
           const usedProvider = data.provider || config.cpProvider;
           const usedModel = data.model || config.cpModel || "";
-          setStatus(`Captured ✓ ${providerLabel(usedProvider)} · ${usedModel}${latency}`, "success");
+          setStatus(`✓ ${providerLabel(usedProvider)} · ${usedModel}${latency}`, "success");
         } catch (e) {
           setStatus(`Error: ${e.message}`, "error");
         }
