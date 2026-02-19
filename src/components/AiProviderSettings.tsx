@@ -153,7 +153,7 @@ export function AiProviderSettings({ config, onEditKey, onConfigChange }: Props)
       )}
 
       {/* Extension sync indicator */}
-      <ExtensionSyncStatus config={config} />
+      <ExtensionSyncStatus config={config} key={primaryProvider + JSON.stringify(selectedModels)} />
     </div>
   );
 }
