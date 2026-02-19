@@ -89,7 +89,7 @@ export async function syncConfigToExtension(config?: CpConfig | null): Promise<S
   const model = resolveModel(provider, providerConfig?.model);
 
   try {
-    if (typeof chrome !== 'undefined' && chrome?.runtime?.sendMessage) {
+    if (typeof chrome !== 'undefined' && chrome?.runtime?.id) {
       const ack = await new Promise<SyncAckResult>((resolve) => {
         const timeout = setTimeout(() => {
           resolve({ ok: false, error: 'Extension not responding (timeout)' });
