@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Context Parking — Chat Capture",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Capture ChatGPT and Claude conversations into Context Parking.",
   "permissions": ["activeTab", "scripting", "storage"],
   "action": {
@@ -9,12 +9,5 @@
   },
   "background": {
     "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["config-sync.js"],
-      "run_at": "document_idle"
-    }
-  ]
+  }
 }

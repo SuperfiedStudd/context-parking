@@ -10,26 +10,38 @@ export interface SummarizeResult {
 const SYSTEM_PROMPT =
   'You are a structured summarizer for AI chat transcripts. Extract: objective, chosen direction, alternatives considered, key decisions, and next action. Output clean markdown sections.';
 
+/** Returns true for OpenAI o-series reasoning models that don't support temperature */
+function isReasoningModel(model: string): boolean {
+  return /^o\d/.test(model);
+}
+
 export async function summarizeWithOpenAI(
   text: string,
   apiKey: string,
   model = 'gpt-4.1-mini',
 ): Promise<SummarizeResult> {
-  console.log('Using model:', model);
+  console.log('[Providers] OpenAI using model:', model);
+
+  const body: Record<string, unknown> = {
+    model,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: text },
+    ],
+  };
+
+  // o-series models do not support temperature
+  if (!isReasoningModel(model)) {
+    body.temperature = 0.3;
+  }
+
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: text },
-      ],
-      temperature: 0.3,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -48,12 +60,22 @@ export async function summarizeWithOpenAI(
   };
 }
 
+/** Error class for Anthropic model-access / 403 errors */
+export class ProviderUnavailableError extends Error {
+  provider: string;
+  constructor(provider: string, message: string) {
+    super(message);
+    this.name = 'ProviderUnavailableError';
+    this.provider = provider;
+  }
+}
+
 export async function summarizeWithAnthropic(
   text: string,
   apiKey: string,
   model = 'claude-4-sonnet',
 ): Promise<SummarizeResult> {
-  console.log('Using model:', model);
+  console.log('[Providers] Anthropic using model:', model);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -72,7 +94,12 @@ export async function summarizeWithAnthropic(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Anthropic error ${res.status}`);
+    const msg = err?.error?.message || `Anthropic error ${res.status}`;
+    // 403 or model-not-found → treat as provider unavailable
+    if (res.status === 403 || /not.*found|not.*available|access|permission/i.test(msg)) {
+      throw new ProviderUnavailableError('anthropic', `Anthropic unavailable: ${msg}`);
+    }
+    throw new Error(msg);
   }
 
   const data = await res.json();
@@ -92,7 +119,7 @@ export async function summarizeWithGoogle(
   apiKey: string,
   model = 'gemini-2.0-flash',
 ): Promise<SummarizeResult> {
-  console.log('Using model:', model);
+  console.log('[Providers] Google using model:', model);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const res = await fetch(url, {

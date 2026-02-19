@@ -29,6 +29,7 @@ export interface CpConfig {
 }
 
 const STORAGE_KEY = 'cp_config_v1';
+const EXTENSION_CONFIG_KEY = 'cp_full_config';
 
 /** Strip any path after the base Supabase domain (e.g. /functions/v1/...) */
 export function sanitizeSupabaseUrl(url: string): string {
@@ -66,9 +67,10 @@ export function setConfig(config: CpConfig): void {
 }
 
 /**
- * Sync config to browser extension via chrome.storage.local and runtime message.
- * Stores a timestamp so the UI can show "Last synced".
- * Silently no-ops if chrome APIs are unavailable (e.g. no extension installed).
+ * Sync config to browser extension.
+ * Writes the full config object to chrome.storage.local under a single key,
+ * and fires a runtime message so popup/background can react immediately.
+ * No content script injection required.
  */
 export function syncConfigToExtension(config?: CpConfig | null): boolean {
   const cfg = config ?? getConfig();
@@ -82,23 +84,30 @@ export function syncConfigToExtension(config?: CpConfig | null): boolean {
   // Always store resolved model — never empty string
   const model = resolveModel(provider, providerConfig?.model);
 
+  // Build the extension payload — flat structure for easy reading
+  const extensionPayload = {
+    cpConfigSynced: true,
+    cpSupabaseUrl: cfg.supabase.url,
+    cpProvider: provider,
+    cpApiKey: apiKey,
+    cpModel: model,
+    cpSyncTimestamp: new Date().toISOString(),
+  };
+
   try {
-    // Attempt chrome.storage.local (only works if extension context is available)
+    // Write directly to chrome.storage.local if available
     if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
-      chrome.storage.local.set({
-        cpConfigSynced: true,
-        cpSupabaseUrl: cfg.supabase.url,
-        cpProvider: provider,
-        cpApiKey: apiKey,
-        cpModel: model,
-        cpSyncTimestamp: new Date().toISOString(),
-      });
+      chrome.storage.local.set(extensionPayload);
     }
 
-    // Also fire a custom DOM event that the content script can pick up
-    window.dispatchEvent(new CustomEvent('cp-config-updated', {
-      detail: { provider, model, apiKey, supabaseUrl: cfg.supabase.url },
-    }));
+    // Also try sending a runtime message to the extension
+    if (typeof chrome !== 'undefined' && chrome?.runtime?.sendMessage) {
+      try {
+        chrome.runtime.sendMessage(extensionPayload);
+      } catch {
+        // Extension not installed or not listening — ok
+      }
+    }
 
     // Store sync timestamp locally so Settings UI can display it
     localStorage.setItem('cp_extension_last_sync', new Date().toISOString());

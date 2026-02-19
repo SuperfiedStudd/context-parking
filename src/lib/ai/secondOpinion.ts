@@ -23,18 +23,27 @@ export interface SecondOpinionResult {
 const SYSTEM_PROMPT =
   'You are a senior strategic advisor. The user will provide structured project context and an optional instruction. Analyze the context critically. Identify blind spots, risks, contradictions, and missed opportunities. Provide a clear, actionable second opinion. Be direct and specific — no filler. Use markdown formatting.';
 
+/** Returns true for OpenAI o-series reasoning models that don't support temperature */
+function isReasoningModel(model: string): boolean {
+  return /^o\d/.test(model);
+}
+
 async function callOpenAI(text: string, key: string, model: string): Promise<{ response: string; model: string }> {
+  const body: Record<string, unknown> = {
+    model,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: text },
+    ],
+  };
+  if (!isReasoningModel(model)) {
+    body.temperature = 0.4;
+  }
+
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: text },
-      ],
-      temperature: 0.4,
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -62,7 +71,15 @@ async function callAnthropic(text: string, key: string, model: string): Promise<
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Anthropic error ${res.status}`);
+    const msg = err?.error?.message || `Anthropic error ${res.status}`;
+    // 403 or model access errors → mark as unavailable
+    if (res.status === 403 || /not.*found|not.*available|access|permission/i.test(msg)) {
+      const unavailableErr = new Error(`Anthropic unavailable: ${msg}`);
+      (unavailableErr as any).providerUnavailable = true;
+      (unavailableErr as any).provider = 'anthropic';
+      throw unavailableErr;
+    }
+    throw new Error(msg);
   }
   const data = await res.json();
   const content = data.content?.find((b: any) => b.type === 'text');
@@ -146,6 +163,7 @@ export async function getSecondOpinion(req: SecondOpinionRequest): Promise<Secon
   }
 
   // ─── NO OVERRIDE: use primary → then fallback chain ───
+  // Skip providers that are marked unavailable (e.g. Anthropic 403)
   const ordered = [primary, ...enabled.filter((p) => p !== primary)];
   let lastError: Error | null = null;
 
@@ -178,6 +196,10 @@ export async function getSecondOpinion(req: SecondOpinionRequest): Promise<Secon
       };
     } catch (err: any) {
       console.error(`[SecondOpinion] Provider ${provider} failed:`, err.message);
+      // If provider is unavailable (403/access error), skip it in fallback
+      if (err.providerUnavailable) {
+        console.warn(`[SecondOpinion] Skipping ${provider} from fallback — provider unavailable`);
+      }
       lastError = err;
     }
   }
