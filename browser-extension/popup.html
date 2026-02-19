@@ -23,14 +23,20 @@
       <h2>Capture Options</h2>
 
       <fieldset class="field-group">
-        <legend>Capture Type</legend>
+        <legend>What do you want to create?</legend>
         <label class="radio-option">
-          <input type="radio" name="captureType" value="structured" checked />
-          <span>Structured Work</span>
+          <input type="radio" name="captureType" value="project" checked />
+          <span>
+            <strong>Create Project</strong>
+            <small>Structured work — decisions, forks, direction</small>
+          </span>
         </label>
         <label class="radio-option">
           <input type="radio" name="captureType" value="draft" />
-          <span>Message Draft</span>
+          <span>
+            <strong>Create Draft</strong>
+            <small>Outbound message — email, slack, proposal</small>
+          </span>
         </label>
       </fieldset>
 
@@ -40,7 +46,7 @@
           id="focusField"
           class="focus-textarea"
           maxlength="300"
-          placeholder="e.g. &quot;Emphasize risks.&quot; &quot;Extract only the final draft.&quot;"
+          placeholder="e.g. &quot;Emphasize risks.&quot; &quot;Extract the final draft to Sarah.&quot;"
           rows="2"
         ></textarea>
         <div class="char-count"><span id="charCount">0</span> / 300</div>

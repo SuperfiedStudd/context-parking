@@ -1,15 +1,12 @@
 import { ActivityEvent } from '@/types';
 import { relativeTime } from '@/lib/helpers';
-import { Plus, Edit, Bell, Copy, Sparkles, RefreshCw, Archive, RotateCcw, Pencil, Trash2, BrainCircuit } from 'lucide-react';
+import { Plus, Edit, Sparkles, Archive, RotateCcw, Pencil, Trash2, BrainCircuit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const iconMap: Record<ActivityEvent['type'], typeof Plus> = {
   created: Plus,
   updated: Edit,
-  reminder_set: Bell,
-  draft_copied: Copy,
   context_generated: Sparkles,
-  draft_status_changed: RefreshCw,
   field_edited: Pencil,
   archived: Archive,
   reactivated: RotateCcw,

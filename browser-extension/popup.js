@@ -38,7 +38,8 @@ focusField.addEventListener("input", () => {
 });
 
 captureBtn.addEventListener("click", () => {
-  document.querySelector('input[name="captureType"][value="structured"]').checked = true;
+  // Default to "project" (Create Project)
+  document.querySelector('input[name="captureType"][value="project"]').checked = true;
   focusField.value = "";
   charCount.textContent = "0";
   modal.style.display = "flex";
@@ -103,16 +104,12 @@ modalConfirm.addEventListener("click", async () => {
             provider: config.cpProvider,
             api_key: config.cpApiKey,
             model: config.cpModel || undefined,
-            capture_type: captureType,
+            capture_type: captureType,   // "project" or "draft"
             user_intent: userIntent || undefined,
           };
 
           console.log("[Extension Capture] Using:", config.cpProvider, config.cpModel);
-          console.log("[Extension Capture] Sending:", {
-            provider: requestBody.provider,
-            model: requestBody.model || "(default)",
-            capture_type: requestBody.capture_type,
-          });
+          console.log("[Extension Capture] Capture type:", captureType);
 
           const res = await fetch(edgeUrl, {
             method: "POST",
@@ -129,7 +126,8 @@ modalConfirm.addEventListener("click", async () => {
           const latency = data.latency_ms ? ` (${(data.latency_ms / 1000).toFixed(1)}s)` : "";
           const usedProvider = data.provider || config.cpProvider;
           const usedModel = data.model || config.cpModel || "";
-          setStatus(`✓ ${providerLabel(usedProvider)} · ${usedModel}${latency}`, "success");
+          const typeLabel = captureType === "draft" ? "Draft" : "Project";
+          setStatus(`✓ ${typeLabel} · ${providerLabel(usedProvider)} · ${usedModel}${latency}`, "success");
         } catch (e) {
           setStatus(`Error: ${e.message}`, "error");
         }

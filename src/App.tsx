@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useCallback } from "react";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
+import DraftDetail from "./pages/DraftDetail";
 import Capture from "./pages/Capture";
 import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -56,6 +57,7 @@ const App = () => {
             <Route path="/" element={<Navigate to="/projects" replace />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/drafts/:id" element={<DraftDetail />} />
             <Route path="/capture" element={<Capture />} />
             <Route path="/settings" element={<SettingsPage onOpenWizard={openWizard} />} />
             <Route path="*" element={<NotFound />} />

@@ -1,16 +1,25 @@
-export type DraftStatus = 'Draft' | 'Ready' | 'Sent';
-
+// ── Draft — first-class standalone entity ─────────────────────────────────────
 export interface Draft {
   id: string;
   title: string;
   content: string;
-  status: DraftStatus;
-  reminderAt?: string;
+  recipient: string;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string | null;
 }
 
+// ── Activity ──────────────────────────────────────────────────────────────────
 export interface ActivityEvent {
   id: string;
-  type: 'created' | 'updated' | 'reminder_set' | 'draft_copied' | 'context_generated' | 'draft_status_changed' | 'field_edited' | 'archived' | 'reactivated' | 'second_opinion_generated';
+  type:
+    | 'created'
+    | 'updated'
+    | 'context_generated'
+    | 'field_edited'
+    | 'archived'
+    | 'reactivated'
+    | 'second_opinion_generated';
   description: string;
   timestamp: string;
   fieldName?: string;
@@ -18,8 +27,7 @@ export interface ActivityEvent {
   secondOpinionId?: string;
 }
 
-export type ProjectStatus = 'active' | 'archived';
-
+// ── Project ───────────────────────────────────────────────────────────────────
 export interface Project {
   id: string;
   title: string;
@@ -28,14 +36,18 @@ export interface Project {
   strategicForks: string[];
   deferredDecisions: string[];
   executiveSnapshot?: string;
-  drafts: Draft[];
   nextAction: string;
   lastActiveAt: string;
-  reminderAt?: string;
+  archivedAt?: string | null;
   activityLog: ActivityEvent[];
-  status?: ProjectStatus;
+  /** @deprecated Use archivedAt instead. Kept for migration compat. */
+  status?: 'active' | 'archived';
+  /** @deprecated Draft is now a standalone entity */
+  drafts?: never[];
+  reminderAt?: string;
 }
 
+// ── Capture ───────────────────────────────────────────────────────────────────
 export interface CaptureEvent {
   chatId: string;
   transcript: string;
@@ -43,9 +55,6 @@ export interface CaptureEvent {
   createdAt: string;
   resolvedToProjectId?: string;
 }
-
-export type ProjectFilter = 'active' | 'drafts' | 'archived';
-export type ViewMode = 'list' | 'grid';
 
 export interface DbCapture {
   id: string;
@@ -63,4 +72,14 @@ export interface DbCapture {
   created_at: string;
   ai_provider?: string;
   ai_model?: string;
+  capture_type?: 'project' | 'draft';
+  // Draft-specific fields returned from edge function for draft captures
+  draft_recipient?: string;
 }
+
+// ── UI state ──────────────────────────────────────────────────────────────────
+export type DashboardTab = 'active' | 'drafts' | 'archived';
+export type ViewMode = 'list' | 'grid';
+
+// Legacy alias so any remaining imports compile
+export type ProjectFilter = DashboardTab;

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Project, DbCapture } from '@/types';
+import { Project, Draft, DbCapture } from '@/types';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { fetchCaptures, markCapturePromoted } from '@/lib/api/captures';
@@ -24,7 +24,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, MessageSquare, Bot, ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Upload, MessageSquare, Bot, ArrowRight, ChevronDown, ChevronRight, FolderOpen, Mail } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 const generateId = () => Math.random().toString(36).substring(2, 10);
@@ -33,14 +34,6 @@ function parseCapture(instruction: string, transcript: string) {
   const result: Partial<Project> = {};
   const planMatch = instruction.match(/plan\s+(.+)/i);
   if (planMatch) result.chosenDirection = planMatch[1].trim();
-  const now = Date.now();
-  if (/remind me tomorrow/i.test(instruction)) {
-    result.reminderAt = new Date(now + 86400000).toISOString();
-  }
-  const daysMatch = instruction.match(/in\s+(\d+)\s+days?/i);
-  if (daysMatch) {
-    result.reminderAt = new Date(now + parseInt(daysMatch[1]) * 86400000).toISOString();
-  }
   const altLines = transcript.match(/^\d+\.\s+.+$/gm);
   if (altLines) {
     result.strategicForks = altLines.slice(0, 3).map((l) => l.replace(/^\d+\.\s+/, '').trim());
@@ -51,7 +44,7 @@ function parseCapture(instruction: string, transcript: string) {
 export default function Capture() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { projects, addProject, updateProject, addCapture, addActivityEvent } = useStore();
+  const { projects, addProject, updateProject, addCapture, addActivityEvent, addDraft } = useStore();
   const [chatId, setChatId] = useState('');
   const [transcript, setTranscript] = useState('');
   const [instruction, setInstruction] = useState('');
@@ -91,10 +84,8 @@ export default function Capture() {
       chosenDirection: parsed.chosenDirection || '',
       strategicForks: parsed.strategicForks || [],
       deferredDecisions: [],
-      drafts: [],
       nextAction: '',
       lastActiveAt: new Date().toISOString(),
-      reminderAt: parsed.reminderAt,
       activityLog: [{ id: generateId(), type: 'created', description: 'Project created from capture', timestamp: new Date().toISOString() }],
     };
     addProject(newProject);
@@ -108,7 +99,6 @@ export default function Capture() {
     const updates: Partial<Project> = {};
     if (preview.chosenDirection) updates.chosenDirection = preview.chosenDirection;
     if (preview.strategicForks) updates.strategicForks = preview.strategicForks;
-    if (preview.reminderAt) updates.reminderAt = preview.reminderAt;
     updateProject(existingProject.id, updates);
     addActivityEvent(existingProject.id, { type: 'updated', description: 'Updated from capture' });
     toast.success('Capture applied to existing project');
@@ -116,29 +106,57 @@ export default function Capture() {
     navigate(`/projects/${existingProject.id}`);
   };
 
+  // Promote a DB capture — routes to Project or Draft based on capture_type
   const promoteCapture = async (cap: DbCapture) => {
-    const newProject: Project = {
-      id: generateId(),
-      title: cap.chat_title || 'Untitled Capture',
-      objective: cap.objective || '',
-      chosenDirection: cap.chosen_direction || '',
-      strategicForks: cap.strategic_forks || [],
-      deferredDecisions: cap.deferred_decisions || [],
-      executiveSnapshot: cap.executive_snapshot || '',
-      drafts: [],
-      nextAction: cap.next_action || '',
-      lastActiveAt: new Date().toISOString(),
-      activityLog: [{ id: generateId(), type: 'created', description: `Promoted from ${cap.source} capture${cap.ai_provider && cap.ai_model ? ` (via ${cap.ai_model} on ${cap.ai_provider})` : ''}`, timestamp: new Date().toISOString() }],
-    };
-    addProject(newProject);
-    try {
-      await markCapturePromoted(cap.id);
-      queryClient.invalidateQueries({ queryKey: ['db-captures'] });
-    } catch (e) {
-      console.error('Failed to mark capture promoted:', e);
+    if (cap.capture_type === 'draft') {
+      // Create standalone Draft entity
+      const now = new Date().toISOString();
+      const newDraft: Draft = {
+        id: generateId(),
+        title: cap.chat_title || 'Untitled Draft',
+        content: cap.chosen_direction || cap.summary || '',
+        recipient: cap.draft_recipient || '',
+        createdAt: now,
+        updatedAt: now,
+      };
+      addDraft(newDraft);
+      try {
+        await markCapturePromoted(cap.id);
+        queryClient.invalidateQueries({ queryKey: ['db-captures'] });
+      } catch (e) {
+        console.error('Failed to mark capture promoted:', e);
+      }
+      toast.success('Draft promoted');
+      navigate(`/drafts/${newDraft.id}`);
+    } else {
+      // Create standalone Project entity
+      const newProject: Project = {
+        id: generateId(),
+        title: cap.chat_title || 'Untitled Capture',
+        objective: cap.objective || '',
+        chosenDirection: cap.chosen_direction || '',
+        strategicForks: cap.strategic_forks || [],
+        deferredDecisions: cap.deferred_decisions || [],
+        executiveSnapshot: cap.executive_snapshot || '',
+        nextAction: cap.next_action || '',
+        lastActiveAt: new Date().toISOString(),
+        activityLog: [{
+          id: generateId(),
+          type: 'created',
+          description: `Promoted from ${cap.source} capture${cap.ai_provider && cap.ai_model ? ` (via ${cap.ai_model} on ${cap.ai_provider})` : ''}`,
+          timestamp: new Date().toISOString(),
+        }],
+      };
+      addProject(newProject);
+      try {
+        await markCapturePromoted(cap.id);
+        queryClient.invalidateQueries({ queryKey: ['db-captures'] });
+      } catch (e) {
+        console.error('Failed to mark capture promoted:', e);
+      }
+      toast.success('Capture promoted to project');
+      navigate(`/projects/${newProject.id}`);
     }
-    toast.success('Capture promoted to project');
-    navigate(`/projects/${newProject.id}`);
   };
 
   return (
@@ -194,7 +212,6 @@ export default function Capture() {
                   <ul className="list-disc list-inside mt-1">{preview.strategicForks.map((f, i) => <li key={i}>{f}</li>)}</ul>
                 </div>
               )}
-              {preview?.reminderAt && <div><span className="font-medium">Reminder:</span> {new Date(preview.reminderAt).toLocaleDateString()}</div>}
             </div>
             <DialogFooter>
               <Button variant="secondary" onClick={() => setShowPreview(false)}>Cancel</Button>
@@ -223,31 +240,43 @@ function CaptureCard({ cap, onPromote }: { cap: DbCapture; onPromote: (cap: DbCa
   const [reconstructionOpen, setReconstructionOpen] = useState(false);
   const hasSnapshot = cap.executive_snapshot && cap.executive_snapshot.trim().length > 0;
   const hasReconstruction = cap.chosen_direction && cap.chosen_direction.trim().length > 0;
+  const isDraft = cap.capture_type === 'draft';
 
   return (
     <Card className="card-shadow">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            {cap.source === 'chatgpt' ? (
+            {isDraft ? (
+              <Mail className="w-4 h-4 text-accent-foreground shrink-0" />
+            ) : cap.source === 'chatgpt' ? (
               <Bot className="w-4 h-4 text-primary shrink-0" />
             ) : (
               <MessageSquare className="w-4 h-4 text-accent shrink-0" />
             )}
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{cap.chat_title}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium truncate">{cap.chat_title}</p>
+                {isDraft && (
+                  <Badge className="text-xs px-1.5 py-0 bg-accent/20 text-accent-foreground border-accent/20 flex-shrink-0">
+                    Draft
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {cap.source} · {formatDistanceToNow(new Date(cap.created_at), { addSuffix: true })}
+                {isDraft && cap.draft_recipient ? ` · To: ${cap.draft_recipient}` : ''}
               </p>
             </div>
           </div>
           <Button size="sm" variant="secondary" className="shrink-0 gap-1" onClick={() => onPromote(cap)}>
-            <ArrowRight className="w-3.5 h-3.5" /> Promote
+            <ArrowRight className="w-3.5 h-3.5" />
+            {isDraft ? 'Create Draft' : 'Promote'}
           </Button>
         </div>
 
-        {/* Executive Snapshot — always expanded */}
-        {hasSnapshot ? (
+        {/* Snapshot or summary */}
+        {hasSnapshot && !isDraft ? (
           <div className="mt-3">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Executive Snapshot</h4>
             <pre className="text-xs bg-background rounded-md p-2.5 whitespace-pre-wrap font-sans border">{cap.executive_snapshot}</pre>
@@ -256,12 +285,12 @@ function CaptureCard({ cap, onPromote }: { cap: DbCapture; onPromote: (cap: DbCa
           <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{cap.summary}</p>
         ) : null}
 
-        {/* Full Memory Reconstruction — collapsible */}
+        {/* Full content — collapsible */}
         {hasReconstruction && (
           <Collapsible open={reconstructionOpen} onOpenChange={setReconstructionOpen} className="mt-2">
             <CollapsibleTrigger className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
               {reconstructionOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-              Full Memory Reconstruction
+              {isDraft ? 'Draft Content' : 'Full Memory Reconstruction'}
             </CollapsibleTrigger>
             <CollapsibleContent>
               <pre className="text-xs bg-background rounded-md p-2.5 whitespace-pre-wrap font-sans border mt-1.5 max-h-60 overflow-y-auto">{cap.chosen_direction}</pre>
