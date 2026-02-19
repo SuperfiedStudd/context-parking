@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { BrainCircuit, ChevronDown, ChevronRight, Loader2, Trash2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { relativeTime } from '@/lib/helpers';
@@ -65,6 +66,7 @@ export function SecondOpinionSection({ project }: Props) {
   const [instruction, setInstruction] = useState('');
   const [loading, setLoading] = useState(false);
   const [attemptingInfo, setAttemptingInfo] = useState<string | null>(null);
+  const [allowFallback, setAllowFallback] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{ opinionId: string; activityEventId?: string } | null>(null);
@@ -158,8 +160,8 @@ export function SecondOpinionSection({ project }: Props) {
       const result = await getSecondOpinion({
         compiledContext: compiled,
         instruction: instruction.trim() || undefined,
-        overrideProvider: selectedProvider,
-        overrideModel: selectedModel,
+        overrideProvider: allowFallback ? undefined : selectedProvider,
+        overrideModel: allowFallback ? undefined : selectedModel,
       });
 
       const record = await insertSecondOpinion({
@@ -325,7 +327,16 @@ export function SecondOpinionSection({ project }: Props) {
             </div>
           </div>
           {enabledProviders.length > 1 && (
-            <p className="text-xs text-muted-foreground">Fallback to other providers enabled if this one fails.</p>
+            <div className="flex items-center justify-between pt-1">
+              <Label htmlFor="so-fallback" className="text-xs text-muted-foreground cursor-pointer">
+                Allow fallback to other providers if selected fails
+              </Label>
+              <Switch
+                id="so-fallback"
+                checked={allowFallback}
+                onCheckedChange={setAllowFallback}
+              />
+            </div>
           )}
         </div>
       ) : (
@@ -335,7 +346,8 @@ export function SecondOpinionSection({ project }: Props) {
       {/* Pre-run indicator */}
       <div className="text-xs text-muted-foreground px-1">
         Will use: <span className="font-medium text-foreground">{PROVIDER_LABELS[selectedProvider]}</span> — <span className="font-medium text-foreground">{getModelLabel(selectedProvider, selectedModel)}</span>
-        {enabledProviders.length > 1 && !loading && <span className="ml-1">(no fallback — explicit selection)</span>}
+        {!allowFallback && <span className="ml-1">(no fallback — explicit selection)</span>}
+        {allowFallback && enabledProviders.length > 1 && <span className="ml-1">(fallback enabled)</span>}
       </div>
 
       {attemptingInfo && (

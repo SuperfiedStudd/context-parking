@@ -35,7 +35,8 @@ export async function summarize(text: string): Promise<SummarizeResponse> {
 
   let lastError: Error | null = null;
 
-  for (const provider of ordered) {
+  for (let i = 0; i < ordered.length; i++) {
+    const provider = ordered[i];
     const providerConfig = config.ai.providers[provider];
     const key = providerConfig?.apiKey;
     if (!key) continue;
@@ -43,15 +44,23 @@ export async function summarize(text: string): Promise<SummarizeResponse> {
     const model = resolveModel(provider, providerConfig?.model);
     const fn = PROVIDER_FN[provider];
     const start = Date.now();
+    const isFallback = i > 0;
+
+    console.log(`[Summarize] ${isFallback ? 'Fallback' : 'Primary'} — attempting: ${provider} / ${model}`);
 
     try {
       const result = await fn(text, key, model);
+      if (isFallback) {
+        console.warn(`[Summarize] Used FALLBACK provider: ${provider} / ${model}`);
+      }
+      console.log(`[Summarize] Success: ${provider} / ${model} in ${Date.now() - start}ms`);
       return {
         ...result,
         provider,
         latency_ms: Date.now() - start,
       };
     } catch (err: any) {
+      console.error(`[Summarize] Provider ${provider} failed:`, err.message);
       lastError = err;
       // Continue to next provider
     }
