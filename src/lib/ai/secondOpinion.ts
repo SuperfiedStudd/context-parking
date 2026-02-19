@@ -5,6 +5,10 @@ import { resolveModel } from './models';
 export interface SecondOpinionRequest {
   compiledContext: string;
   instruction?: string;
+  /** Override provider (otherwise uses primary from config) */
+  overrideProvider?: AiProvider;
+  /** Override model (otherwise uses resolved model for provider) */
+  overrideModel?: string;
 }
 
 export interface SecondOpinionResult {
@@ -102,7 +106,9 @@ export async function getSecondOpinion(req: SecondOpinionRequest): Promise<Secon
     prompt += `\n\n---\n\n**Focus Instruction:** ${req.instruction.trim()}`;
   }
 
-  const ordered = [config.ai.primaryProvider, ...enabled.filter((p) => p !== config.ai.primaryProvider)];
+  // Determine provider order: override first, then primary, then fallbacks
+  const primary = req.overrideProvider ?? config.ai.primaryProvider;
+  const ordered = [primary, ...enabled.filter((p) => p !== primary)];
   let lastError: Error | null = null;
 
   for (const provider of ordered) {
@@ -110,7 +116,10 @@ export async function getSecondOpinion(req: SecondOpinionRequest): Promise<Secon
     const key = providerConfig?.apiKey;
     if (!key) continue;
 
-    const model = resolveModel(provider, providerConfig?.model);
+    // Use override model only for the override provider
+    const model = (provider === primary && req.overrideModel)
+      ? req.overrideModel
+      : resolveModel(provider, providerConfig?.model);
     const fn = PROVIDER_FN[provider];
     const start = Date.now();
 

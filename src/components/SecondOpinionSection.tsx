@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -28,8 +35,8 @@ import {
   type SecondOpinionRecord,
 } from '@/lib/api/secondOpinions';
 import { useStore } from '@/store/useStore';
-import { getConfig, PROVIDER_LABELS } from '@/lib/configStore';
-import { resolveModel, getModelLabel } from '@/lib/ai/models';
+import { getConfig, getEnabledProviders, PROVIDER_LABELS, type AiProvider } from '@/lib/configStore';
+import { resolveModel, getModelLabel, PROVIDER_MODELS } from '@/lib/ai/models';
 
 interface ContextField {
   key: string;
@@ -60,6 +67,28 @@ export function SecondOpinionSection({ project }: Props) {
   const [fetching, setFetching] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{ opinionId: string; activityEventId?: string } | null>(null);
+
+  // Inline provider/model selection
+  const config = getConfig();
+  const enabledProviders = config ? getEnabledProviders(config) : [];
+  const [selectedProvider, setSelectedProvider] = useState<AiProvider>(
+    () => config?.ai.primaryProvider ?? 'openai'
+  );
+  const [selectedModel, setSelectedModel] = useState<string>(
+    () => {
+      if (!config) return '';
+      const p = config.ai.primaryProvider;
+      return resolveModel(p, config.ai.providers[p]?.model);
+    }
+  );
+
+  // Keep provider/model in sync if config changes externally
+  useEffect(() => {
+    if (!config) return;
+    const p = config.ai.primaryProvider;
+    setSelectedProvider(p);
+    setSelectedModel(resolveModel(p, config.ai.providers[p]?.model));
+  }, [config?.ai.primaryProvider]);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,6 +155,8 @@ export function SecondOpinionSection({ project }: Props) {
       const result = await getSecondOpinion({
         compiledContext: compiled,
         instruction: instruction.trim() || undefined,
+        overrideProvider: selectedProvider,
+        overrideModel: selectedModel,
       });
 
       const record = await insertSecondOpinion({
@@ -242,12 +273,64 @@ export function SecondOpinionSection({ project }: Props) {
         />
       </div>
 
-      {/* Provider/Model indicator + Run Button */}
-      <ProviderModelIndicator />
+      {/* Provider/Model selector */}
+      {config && enabledProviders.length > 0 ? (
+        <div className="bg-card border rounded-lg p-4 card-shadow space-y-3">
+          <Label className="text-xs text-muted-foreground uppercase tracking-wide">AI Provider & Model</Label>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">Provider</Label>
+              <Select
+                value={selectedProvider}
+                onValueChange={(v) => {
+                  const p = v as AiProvider;
+                  setSelectedProvider(p);
+                  setSelectedModel(resolveModel(p, config.ai.providers[p]?.model));
+                }}
+              >
+                <SelectTrigger className="mt-1 h-8 text-xs bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  {enabledProviders.map((p) => (
+                    <SelectItem key={p} value={p} className="text-xs">
+                      {PROVIDER_LABELS[p]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">Model</Label>
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger className="mt-1 h-8 text-xs bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  {PROVIDER_MODELS[selectedProvider].map((m) => (
+                    <SelectItem key={m.id} value={m.id} className="text-xs">
+                      <div className="flex items-center gap-2">
+                        <span>{m.label}</span>
+                        {m.description && <span className="text-muted-foreground">— {m.description}</span>}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {enabledProviders.length > 1 && (
+            <p className="text-xs text-muted-foreground">Fallback to other providers enabled if this one fails.</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-destructive">No AI provider configured. Complete setup in Settings.</p>
+      )}
+
       <Button
         className="w-full gap-2"
         onClick={handleRun}
-        disabled={loading || !hasAnyContext}
+        disabled={loading || !hasAnyContext || !config}
       >
         {loading ? (
           <>
@@ -326,27 +409,5 @@ export function SecondOpinionSection({ project }: Props) {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-/** Small indicator showing which provider/model will be used */
-function ProviderModelIndicator() {
-  const config = getConfig();
-  if (!config) {
-    return (
-      <p className="text-xs text-destructive">No AI provider configured. Complete setup in Settings.</p>
-    );
-  }
-
-  const provider = config.ai.primaryProvider;
-  const providerConfig = config.ai.providers[provider];
-  const model = resolveModel(provider, providerConfig?.model);
-  const enabledCount = Object.values(config.ai.providers).filter((p) => p?.apiKey).length;
-
-  return (
-    <p className="text-xs text-muted-foreground">
-      Will use: <span className="font-medium text-foreground">{PROVIDER_LABELS[provider]}</span> — <span className="font-medium text-foreground">{getModelLabel(provider, model)}</span>
-      {enabledCount > 1 && <span className="ml-1">(with fallback enabled)</span>}
-    </p>
   );
 }
