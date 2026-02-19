@@ -49,7 +49,7 @@ modalConfirm.addEventListener("click", async () => {
   const userIntent = focusField.value.trim().substring(0, 300);
   modal.style.display = "none";
 
-  // Always read fresh config at capture time
+  // Always read FRESH config from chrome.storage.local at moment of capture
   chrome.storage.local.get(
     ["cpSupabaseUrl", "cpProvider", "cpApiKey", "cpModel"],
     async (config) => {
@@ -57,6 +57,13 @@ modalConfirm.addEventListener("click", async () => {
         setStatus("Config not synced. Visit your Context Parking app first.", "error");
         return;
       }
+
+      // Deterministic logging — always log what config we're using
+      console.log("[Extension Capture] Config at capture time:", {
+        provider: config.cpProvider,
+        model: config.cpModel || "(default)",
+        supabaseUrl: config.cpSupabaseUrl,
+      });
 
       setStatus("Capturing…", "capturing");
 
@@ -87,18 +94,27 @@ modalConfirm.addEventListener("click", async () => {
             const baseUrl = config.cpSupabaseUrl.replace(/\/+$/, "");
             const edgeUrl = `${baseUrl}/functions/v1/capture-and-summarize`;
 
+            const requestBody = {
+              source: response.source,
+              chat_title: response.chatTitle,
+              transcript: response.transcript,
+              provider: config.cpProvider,
+              api_key: config.cpApiKey,
+              model: config.cpModel || undefined,
+              capture_type: captureType,
+              user_intent: userIntent || undefined,
+            };
+
+            console.log("[Extension Capture] Sending to edge:", {
+              provider: requestBody.provider,
+              model: requestBody.model || "(will use default)",
+              capture_type: requestBody.capture_type,
+            });
+
             const res = await fetch(edgeUrl, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                source: response.source,
-                chat_title: response.chatTitle,
-                transcript: response.transcript,
-                provider: config.cpProvider,
-                api_key: config.cpApiKey,
-                capture_type: captureType,
-                user_intent: userIntent || undefined,
-              }),
+              body: JSON.stringify(requestBody),
             });
 
             if (!res.ok) {
@@ -110,7 +126,9 @@ modalConfirm.addEventListener("click", async () => {
             const latency = data.latency_ms
               ? ` (${(data.latency_ms / 1000).toFixed(1)}s)`
               : "";
-            setStatus(`Captured ✓${latency}`, "success");
+            const usedProvider = data.provider || config.cpProvider;
+            const usedModel = data.model || config.cpModel || "";
+            setStatus(`Captured ✓ ${providerLabel(usedProvider)} · ${usedModel}${latency}`, "success");
           } catch (e) {
             setStatus(`Error: ${e.message}`, "error");
           }

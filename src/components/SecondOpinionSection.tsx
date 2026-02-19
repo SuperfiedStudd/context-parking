@@ -64,6 +64,7 @@ export function SecondOpinionSection({ project }: Props) {
   const [selectedOpinionIds, setSelectedOpinionIds] = useState<Set<string>>(new Set());
   const [instruction, setInstruction] = useState('');
   const [loading, setLoading] = useState(false);
+  const [attemptingInfo, setAttemptingInfo] = useState<string | null>(null);
   const [fetching, setFetching] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{ opinionId: string; activityEventId?: string } | null>(null);
@@ -150,6 +151,8 @@ export function SecondOpinionSection({ project }: Props) {
       return;
     }
 
+    const attemptLabel = `${PROVIDER_LABELS[selectedProvider]} — ${getModelLabel(selectedProvider, selectedModel)}`;
+    setAttemptingInfo(`Attempting: ${attemptLabel}`);
     setLoading(true);
     try {
       const result = await getSecondOpinion({
@@ -176,11 +179,13 @@ export function SecondOpinionSection({ project }: Props) {
         secondOpinionId: record.id,
       });
 
-      toast.success(`Second opinion generated (${result.model}, ${result.latency_ms}ms)`);
+      const fallbackNote = result.usedFallback ? ' (fallback used)' : '';
+      toast.success(`Second opinion generated (${result.model}, ${result.latency_ms}ms)${fallbackNote}`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to generate second opinion.');
     } finally {
       setLoading(false);
+      setAttemptingInfo(null);
     }
   };
 
@@ -325,6 +330,18 @@ export function SecondOpinionSection({ project }: Props) {
         </div>
       ) : (
         <p className="text-xs text-destructive">No AI provider configured. Complete setup in Settings.</p>
+      )}
+
+      {/* Pre-run indicator */}
+      <div className="text-xs text-muted-foreground px-1">
+        Will use: <span className="font-medium text-foreground">{PROVIDER_LABELS[selectedProvider]}</span> — <span className="font-medium text-foreground">{getModelLabel(selectedProvider, selectedModel)}</span>
+        {enabledProviders.length > 1 && !loading && <span className="ml-1">(no fallback — explicit selection)</span>}
+      </div>
+
+      {attemptingInfo && (
+        <div className="text-xs text-primary font-medium px-1 animate-pulse">
+          {attemptingInfo}
+        </div>
       )}
 
       <Button

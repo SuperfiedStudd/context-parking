@@ -185,8 +185,9 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { source, chat_title, transcript, provider, api_key, model, capture_type, user_intent } = body;
 
-    // Logging (no sensitive data)
-    console.log("Provider:", provider);
+    // Deterministic logging — provider/model chain
+    console.log("Edge received provider:", provider);
+    console.log("Edge received model:", model || "(will use default)");
     console.log("Capture type:", capture_type || "planning");
     console.log("User intent provided:", !!user_intent);
 
