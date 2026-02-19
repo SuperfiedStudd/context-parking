@@ -16,6 +16,8 @@ export interface SecondOpinionResult {
   provider: AiProvider;
   model: string;
   latency_ms: number;
+  /** True if a fallback provider was used (only possible when no explicit override) */
+  usedFallback?: boolean;
 }
 
 const SYSTEM_PROMPT =
@@ -106,32 +108,76 @@ export async function getSecondOpinion(req: SecondOpinionRequest): Promise<Secon
     prompt += `\n\n---\n\n**Focus Instruction:** ${req.instruction.trim()}`;
   }
 
-  // Determine provider order: override first, then primary, then fallbacks
+  const hasExplicitOverride = !!req.overrideProvider;
   const primary = req.overrideProvider ?? config.ai.primaryProvider;
+
+  // ─── EXPLICIT OVERRIDE: attempt ONLY the selected provider, NO fallback ───
+  if (hasExplicitOverride) {
+    const providerConfig = config.ai.providers[primary];
+    const key = providerConfig?.apiKey;
+    if (!key) {
+      throw new Error(`No API key configured for ${primary}. Add it in Settings.`);
+    }
+
+    const model = req.overrideModel
+      ? req.overrideModel
+      : resolveModel(primary, providerConfig?.model);
+
+    console.log(`[SecondOpinion] Explicit override — attempting ONLY: ${primary} / ${model}`);
+
+    const fn = PROVIDER_FN[primary];
+    const start = Date.now();
+
+    try {
+      const result = await fn(prompt, key, model);
+      console.log(`[SecondOpinion] Success: ${primary} / ${result.model} in ${Date.now() - start}ms`);
+      return {
+        response: result.response,
+        provider: primary,
+        model: result.model,
+        latency_ms: Date.now() - start,
+        usedFallback: false,
+      };
+    } catch (err: any) {
+      console.error(`[SecondOpinion] Explicit provider ${primary} FAILED:`, err.message);
+      // Surface the error directly — do NOT fallback
+      throw new Error(`${primary} (${model}) failed: ${err.message}`);
+    }
+  }
+
+  // ─── NO OVERRIDE: use primary → then fallback chain ───
   const ordered = [primary, ...enabled.filter((p) => p !== primary)];
   let lastError: Error | null = null;
 
-  for (const provider of ordered) {
+  for (let i = 0; i < ordered.length; i++) {
+    const provider = ordered[i];
     const providerConfig = config.ai.providers[provider];
     const key = providerConfig?.apiKey;
     if (!key) continue;
 
-    // Use override model only for the override provider
-    const model = (provider === primary && req.overrideModel)
+    const model = (i === 0 && req.overrideModel)
       ? req.overrideModel
       : resolveModel(provider, providerConfig?.model);
     const fn = PROVIDER_FN[provider];
     const start = Date.now();
 
+    const isFallback = i > 0;
+    console.log(`[SecondOpinion] ${isFallback ? 'Fallback' : 'Primary'} — attempting: ${provider} / ${model}`);
+
     try {
       const result = await fn(prompt, key, model);
+      if (isFallback) {
+        console.warn(`[SecondOpinion] Used FALLBACK provider: ${provider} / ${result.model}`);
+      }
       return {
         response: result.response,
         provider,
         model: result.model,
         latency_ms: Date.now() - start,
+        usedFallback: isFallback,
       };
     } catch (err: any) {
+      console.error(`[SecondOpinion] Provider ${provider} failed:`, err.message);
       lastError = err;
     }
   }
