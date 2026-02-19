@@ -8,47 +8,52 @@ const DEFAULT_MODELS = {
 };
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "SYNC_CONFIG" && message.payload) {
-    const { supabaseUrl, provider, apiKey, model } = message.payload;
+  if (message.type === "SYNC_CONFIG") {
+    console.log("[Extension BG] SYNC_CONFIG received:", JSON.stringify(message.payload));
 
-    if (!supabaseUrl || !provider || !apiKey) {
+    const payload = message.payload;
+    if (!payload || !payload.supabaseUrl || !payload.provider || !payload.apiKey) {
+      console.warn("[Extension BG] SYNC_CONFIG missing fields");
       sendResponse({ type: "SYNC_ACK", ok: false, error: "Missing fields" });
       return true;
     }
 
-    // Resolve base URL
     let baseUrl;
     try {
-      const u = new URL(supabaseUrl);
+      const u = new URL(payload.supabaseUrl);
       baseUrl = `${u.protocol}//${u.host}`;
     } catch {
-      baseUrl = supabaseUrl.replace(/\/functions.*$/, "").replace(/\/+$/, "");
+      baseUrl = payload.supabaseUrl.replace(/\/functions.*$/, "").replace(/\/+$/, "");
     }
 
-    const resolvedModel = model || DEFAULT_MODELS[provider] || "";
+    const resolvedModel = payload.model || DEFAULT_MODELS[payload.provider] || "";
     const timestamp = new Date().toISOString();
 
     const stored = {
       cpConfigSynced: true,
       cpSupabaseUrl: baseUrl,
-      cpProvider: provider,
-      cpApiKey: apiKey,
+      cpProvider: payload.provider,
+      cpApiKey: payload.apiKey,
       cpModel: resolvedModel,
       cpSyncTimestamp: timestamp,
     };
 
-    chrome.storage.local.set(stored, () => {
-      // Respond with ACK containing the stored values
-      sendResponse({
-        type: "SYNC_ACK",
-        ok: true,
-        provider: stored.cpProvider,
-        model: stored.cpModel,
-        timestamp: stored.cpSyncTimestamp,
+    try {
+      chrome.storage.local.set(stored, () => {
+        console.log("[Extension BG] Config stored, sending SYNC_ACK");
+        sendResponse({
+          type: "SYNC_ACK",
+          ok: true,
+          provider: stored.cpProvider,
+          model: stored.cpModel,
+          timestamp: stored.cpSyncTimestamp,
+        });
       });
-    });
+    } catch (err) {
+      console.error("[Extension BG] storage.set failed:", err);
+      sendResponse({ type: "SYNC_ACK", ok: false, error: err.message });
+    }
 
-    // Return true to indicate async sendResponse
-    return true;
+    return true; // REQUIRED for async sendResponse
   }
 });
