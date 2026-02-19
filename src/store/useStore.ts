@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Project, CaptureEvent, ActivityEvent, DraftStatus, ProjectFilter, ViewMode, ProjectStatus } from '@/types';
+// ProjectFilter is now: 'active' | 'drafts' | 'archived'
 import { seedProjects } from '@/data/seed';
 
 interface AppState {
