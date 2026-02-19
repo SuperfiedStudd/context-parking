@@ -9,11 +9,11 @@ import { deleteSecondOpinion } from '@/lib/api/secondOpinions';
 import { Badge } from '@/components/ui/badge';
 import { useState, useRef, useEffect } from 'react';
 import {
-  ArrowLeft, FileText, Copy, Check, CheckCircle, Send, Bell, Clock, Edit3, Archive, RotateCcw, Plus, X, Trash2,
+  ArrowLeft, FileText, Clock, Edit3, Archive, RotateCcw, Plus, X, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { relativeTime } from '@/lib/helpers';
-import { DraftStatus } from '@/types';
+import { ActivityEvent } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -192,7 +192,7 @@ function EditableListSection({
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { projects, updateProject, updateDraftStatus, addActivityEvent, deleteActivityEvent, archiveProject, reactivateProject } = useStore();
+  const { projects, updateProject, addActivityEvent, deleteActivityEvent, archiveProject, reactivateProject } = useStore();
   const project = projects.find((p) => p.id === id);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -211,7 +211,7 @@ export default function ProjectDetail() {
     );
   }
 
-  const isArchived = project.status === 'archived';
+  const isArchived = !!project.archivedAt;
 
   const editField = (fieldName: string, fieldLabel: string, newValue: any, previousValue?: string) => {
     updateProject(project.id, { [fieldName]: newValue });
@@ -221,29 +221,6 @@ export default function ProjectDetail() {
       fieldName,
       previousValue: previousValue?.substring(0, 200),
     });
-  };
-
-  const copyDraft = async (content: string) => {
-    await navigator.clipboard.writeText(content);
-    toast.success('Draft copied');
-    addActivityEvent(project.id, { type: 'draft_copied', description: 'Draft copied to clipboard' });
-  };
-
-  const statusIcon = (s: DraftStatus) => {
-    if (s === 'Ready') return <CheckCircle className="w-3 h-3" />;
-    if (s === 'Sent') return <Send className="w-3 h-3" />;
-    return <Edit3 className="w-3 h-3" />;
-  };
-
-  const statusColor = (s: DraftStatus) => {
-    if (s === 'Ready') return 'bg-accent/30 text-accent-foreground border-accent/30';
-    if (s === 'Sent') return 'bg-primary/15 text-primary border-primary/20';
-    return 'bg-muted text-muted-foreground';
-  };
-
-  const cycleDraftStatus = (draftId: string, current: DraftStatus) => {
-    const next: DraftStatus = current === 'Draft' ? 'Ready' : current === 'Ready' ? 'Sent' : 'Draft';
-    updateDraftStatus(project.id, draftId, next);
   };
 
   const handleDeleteEvent = (eventId: string) => {
@@ -356,39 +333,6 @@ export default function ProjectDetail() {
             items={project.deferredDecisions || []}
             onSave={(v) => editField('deferredDecisions', 'Deferred Decisions', v, (project.deferredDecisions || []).join('; '))}
           />
-
-          {/* Drafts */}
-          {project.drafts.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Drafts</h3>
-              {project.drafts.map((draft) => (
-                <div key={draft.id} className="bg-card border rounded-lg p-4 card-shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-medium">{draft.title}</h4>
-                      <Badge
-                        className={`text-xs gap-1 cursor-pointer ${statusColor(draft.status)}`}
-                        onClick={() => cycleDraftStatus(draft.id, draft.status)}
-                      >
-                        {statusIcon(draft.status)} {draft.status}
-                      </Badge>
-                    </div>
-                    <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => copyDraft(draft.content)}>
-                      <Copy className="w-3 h-3" /> Copy
-                    </Button>
-                  </div>
-                  <pre className="text-xs bg-background rounded-md p-3 whitespace-pre-wrap font-sans border max-h-40 overflow-y-auto">
-                    {draft.content}
-                  </pre>
-                  {draft.reminderAt && (
-                    <div className="mt-2 flex items-center gap-1 text-xs text-primary">
-                      <Bell className="w-3 h-3" /> Reminder {relativeTime(draft.reminderAt)}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Next Action */}
           <EditableSection

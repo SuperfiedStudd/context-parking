@@ -2,47 +2,44 @@ import { useStore } from '@/store/useStore';
 import { ProjectCard } from '@/components/ProjectCard';
 import { DraftCard } from '@/components/DraftCard';
 import { Layout } from '@/components/Layout';
-import { ProjectFilter } from '@/types';
-import { LayoutList, LayoutGrid } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { DashboardTab } from '@/types';
+import { LayoutList, LayoutGrid, Archive, FileText, FolderOpen } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { relativeTime } from '@/lib/helpers';
+import { toast } from 'sonner';
 
-const tabs: { key: ProjectFilter; label: string }[] = [
+const tabs: { key: DashboardTab; label: string }[] = [
   { key: 'active', label: 'Active Projects' },
   { key: 'drafts', label: 'Drafts' },
   { key: 'archived', label: 'Archived' },
 ];
 
 export default function Projects() {
-  const { projects, filter, setFilter, viewMode, setViewMode } = useStore();
+  const { projects, drafts, filter, setFilter, viewMode, setViewMode, archiveProject, reactivateProject, archiveDraft, unarchiveDraft } = useStore();
 
-  // ── Active Projects: not archived, sorted by lastActiveAt desc ─────────────
+  // ── Active Projects: no archivedAt, sorted by lastActiveAt desc ─────────────
   const activeProjects = projects
-    .filter((p) => p.status !== 'archived')
+    .filter((p) => !p.archivedAt)
     .sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime());
 
-  // ── Drafts: not archived, has at least one draft ───────────────────────────
-  // Flatten to individual (project, draft) pairs, sorted by draft reminderAt
-  // (used as a proxy for lastEditedAt since Draft has no dedicated timestamp field)
-  const draftEntries = projects
-    .filter((p) => p.status !== 'archived' && p.drafts.length > 0)
-    .flatMap((p) =>
-      p.drafts.map((d) => ({ project: p, draft: d }))
-    )
-    .sort((a, b) => {
-      // Fall back to project lastActiveAt if no reminderAt on draft
-      const aTime = a.draft.reminderAt
-        ? new Date(a.draft.reminderAt).getTime()
-        : new Date(a.project.lastActiveAt).getTime();
-      const bTime = b.draft.reminderAt
-        ? new Date(b.draft.reminderAt).getTime()
-        : new Date(b.project.lastActiveAt).getTime();
-      return bTime - aTime;
-    });
+  // ── Drafts: no archivedAt, sorted by updatedAt desc ───────────────────────
+  const activeDrafts = drafts
+    .filter((d) => !d.archivedAt)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
-  // ── Archived: status archived, sorted by lastActiveAt desc ────────────────
+  // ── Archived: both archived projects + archived drafts ─────────────────────
   const archivedProjects = projects
-    .filter((p) => p.status === 'archived')
-    .sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime());
+    .filter((p) => !!p.archivedAt)
+    .map((p) => ({ type: 'project' as const, item: p, archivedAt: p.archivedAt! }));
+
+  const archivedDrafts = drafts
+    .filter((d) => !!d.archivedAt)
+    .map((d) => ({ type: 'draft' as const, item: d, archivedAt: d.archivedAt! }));
+
+  const archivedItems = [...archivedProjects, ...archivedDrafts].sort(
+    (a, b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime()
+  );
 
   const currentFilter = (filter === 'active' || filter === 'drafts' || filter === 'archived')
     ? filter
@@ -50,13 +47,13 @@ export default function Projects() {
 
   const isEmpty =
     (currentFilter === 'active' && activeProjects.length === 0) ||
-    (currentFilter === 'drafts' && draftEntries.length === 0) ||
-    (currentFilter === 'archived' && archivedProjects.length === 0);
+    (currentFilter === 'drafts' && activeDrafts.length === 0) ||
+    (currentFilter === 'archived' && archivedItems.length === 0);
 
   const emptyMessages: Record<typeof currentFilter, string> = {
-    active: 'No active projects.',
-    drafts: 'No drafts yet.',
-    archived: 'No archived projects.',
+    active: 'No active projects. Use the browser extension or Capture page to create one.',
+    drafts: 'No drafts yet. Use the browser extension and choose "Create Draft".',
+    archived: 'Nothing archived yet.',
   };
 
   return (
@@ -80,8 +77,8 @@ export default function Projects() {
           ))}
         </div>
 
-        {/* View mode — only relevant for project views */}
-        {currentFilter !== 'drafts' && (
+        {/* View mode — only for Active Projects */}
+        {currentFilter === 'active' && (
           <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('list')}
@@ -111,19 +108,81 @@ export default function Projects() {
       ) : currentFilter === 'drafts' ? (
         // ── Drafts tab: outbound message centre feel ─────────────────────────
         <div className="space-y-2">
-          {draftEntries.map(({ project, draft }) => (
-            <DraftCard key={`${project.id}-${draft.id}`} project={project} draft={draft} />
+          {activeDrafts.map((draft) => (
+            <DraftCard key={draft.id} draft={draft} />
           ))}
+        </div>
+      ) : currentFilter === 'archived' ? (
+        // ── Archived: mixed Projects + Drafts ────────────────────────────────
+        <div className="space-y-2">
+          {archivedItems.map((entry) => {
+            if (entry.type === 'project') {
+              const project = entry.item;
+              return (
+                <div
+                  key={`project-${project.id}`}
+                  className="bg-card border rounded-lg px-4 py-3 card-shadow flex items-center gap-3"
+                >
+                  <FolderOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0">Project</Badge>
+                      <span className="text-sm font-medium truncate">{project.title}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Archived {relativeTime(project.archivedAt!)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs flex-shrink-0"
+                    onClick={() => { reactivateProject(project.id); toast.success('Project reactivated'); }}
+                  >
+                    Unarchive
+                  </Button>
+                </div>
+              );
+            } else {
+              const draft = entry.item;
+              return (
+                <div
+                  key={`draft-${draft.id}`}
+                  className="bg-card border rounded-lg px-4 py-3 card-shadow flex items-center gap-3"
+                >
+                  <Archive className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Badge className="text-xs px-1.5 py-0 bg-accent/20 text-accent-foreground border-accent/20">Draft</Badge>
+                      <span className="text-sm font-medium truncate">{draft.title}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {draft.recipient ? `To: ${draft.recipient} · ` : ''}
+                      Archived {relativeTime(draft.archivedAt!)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs flex-shrink-0"
+                    onClick={() => { unarchiveDraft(draft.id); toast.success('Draft restored'); }}
+                  >
+                    Unarchive
+                  </Button>
+                </div>
+              );
+            }
+          })}
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {(currentFilter === 'archived' ? archivedProjects : activeProjects).map((p) => (
+          {activeProjects.map((p) => (
             <ProjectCard key={p.id} project={p} viewMode="grid" />
           ))}
         </div>
       ) : (
         <div className="space-y-2">
-          {(currentFilter === 'archived' ? archivedProjects : activeProjects).map((p) => (
+          {activeProjects.map((p) => (
             <ProjectCard key={p.id} project={p} viewMode="list" />
           ))}
         </div>

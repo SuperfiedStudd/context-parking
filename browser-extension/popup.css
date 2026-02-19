@@ -155,11 +155,23 @@ h1 {
 
 .radio-option {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   font-size: 13px;
-  padding: 6px 0;
+  padding: 8px 0;
   cursor: pointer;
+}
+
+.radio-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.radio-option small {
+  font-size: 11px;
+  color: #777;
+  font-weight: 400;
 }
 
 .radio-option input[type="radio"] {

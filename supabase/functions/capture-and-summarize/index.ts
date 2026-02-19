@@ -6,13 +6,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// --- Instruction templates by capture type ---
+// --- Instruction templates ---
 
-const INSTRUCTION_STRUCTURED =
+const INSTRUCTION_PROJECT =
   "You are reconstructing structured memory from a working session.\n" +
   "Your goal is maximum memory durability and reasoning preservation, not compression.\n\n" +
   "You must produce TWO sections in your JSON output.\n\n" +
   "Extract EXACTLY these fields as JSON:\n" +
+  '- "title": A concise, descriptive project title (5–8 words max). Must reflect actual content. No generic words like "Capture", "Notes", "Follow up".\n' +
   '- "summary": The EXECUTIVE SNAPSHOT — 6-10 concise bullet points (as a single string with newlines) summarizing: core objective, main decisions, major forks, deferred items, immediate next action (if any). Must be concise and scannable. Must not introduce new ideas.\n' +
   '- "objective": What the user was trying to accomplish (1-2 sentences)\n' +
   '- "strategic_forks": Array of up to 5 strategic forks — active decision branches discussed (strings). Each fork must list both sides clearly. If a tradeoff contains "vs", "or", or comparison language, promote it explicitly. Do NOT collapse forks into narrative paragraphs. If none, empty array.\n' +
@@ -31,29 +32,40 @@ const INSTRUCTION_STRUCTURED =
   "- Avoid fluff. Avoid repetition.\n";
 
 const INSTRUCTION_DRAFT =
+  "You are extracting a final outbound message draft from a chat conversation.\n" +
+  "The user wants to send a message to someone. Your job is to extract or compose the final message they intend to send.\n\n" +
   "Extract EXACTLY these fields as JSON:\n" +
-  '- "summary": 1-2 sentence description of the draft purpose and audience\n' +
-  '- "objective": What the draft is intended to communicate (1 sentence)\n' +
-  '- "strategic_forks": Empty array (not applicable for drafts)\n' +
-  '- "deferred_decisions": Empty array (not applicable for drafts)\n' +
-  '- "chosen_direction": The latest draft version text, preserving tone and structure. Remove meta discussion about the draft.\n' +
-  '- "next_action": Any remaining edits or send instructions mentioned (1 sentence). If none, empty string.\n';
+  '- "title": A concise descriptive title for this draft (5–8 words max). Reflect the purpose, e.g. "Follow-up to Sarah on budget proposal". No generic words.\n' +
+  '- "recipient": The intended recipient — a name, role, or group (e.g. "Sarah", "the hiring manager", "the team"). Extract best-effort from context. Empty string if truly unknown.\n' +
+  '- "content": The refined final message text only. This must be the message the user can actually send. Write in the user\'s voice. Do not include meta commentary, analysis, or JSON inside this field. Clean, ready-to-send prose.\n' +
+  '- "summary": 1-2 sentence description of the draft purpose and audience.\n' +
+  '- "objective": What the draft is intended to communicate (1 sentence).\n' +
+  '- "strategic_forks": Empty array.\n' +
+  '- "deferred_decisions": Empty array.\n' +
+  '- "chosen_direction": Same as content field — the refined final message.\n' +
+  '- "next_action": Any remaining edit or send instructions mentioned (1 sentence). Empty string if none.\n' +
+  '- "executive_snapshot": Same as summary.\n\n' +
+  "Rules:\n" +
+  "- Output the message in the content field exactly as it should be sent.\n" +
+  "- Do not add meta commentary inside the message.\n" +
+  "- Do not invent recipient if unknown — use empty string.\n" +
+  "- Title must be descriptive and specific, not generic.\n";
 
 const CAPTURE_TYPE_INSTRUCTIONS: Record<string, string> = {
-  structured: INSTRUCTION_STRUCTURED,
-  planning: INSTRUCTION_STRUCTURED,
+  project: INSTRUCTION_PROJECT,
+  structured: INSTRUCTION_PROJECT,   // legacy alias
+  planning: INSTRUCTION_PROJECT,     // legacy alias
   draft: INSTRUCTION_DRAFT,
 };
 
 function buildSystemPrompt(captureType?: string, userIntent?: string): string {
-  const instruction = CAPTURE_TYPE_INSTRUCTIONS[captureType || ""] || INSTRUCTION_PLANNING;
+  const instruction = CAPTURE_TYPE_INSTRUCTIONS[captureType || ""] || INSTRUCTION_PROJECT;
 
   let prompt =
     "You are a structured data extractor. Given a chat transcript, " +
     instruction +
     "\nReturn ONLY valid JSON, no markdown, no explanation.";
 
-  // Append user intent block if provided (do not modify system prompt structure)
   if (userIntent && userIntent.trim().length > 0) {
     prompt += `\n\nUser Capture Intent:\n${userIntent.trim().substring(0, 300)}`;
   }
@@ -190,13 +202,11 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { source, chat_title, transcript, provider, api_key, model, capture_type, user_intent } = body;
 
-    // Deterministic logging — provider/model chain
     console.log("Edge received provider:", provider);
     console.log("Edge received model:", model || "(will use default)");
-    console.log("Capture type:", capture_type || "planning");
+    console.log("Capture type:", capture_type || "project");
     console.log("User intent provided:", !!user_intent);
 
-    // Validate required fields
     if (!transcript) {
       return new Response(JSON.stringify({ error: "Missing field: transcript" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -223,7 +233,6 @@ Deno.serve(async (req) => {
     const systemPrompt = buildSystemPrompt(capture_type, user_intent);
     const start = Date.now();
 
-    // Call AI provider with type-specific system prompt
     const aiResult = await PROVIDER_FN[provider as Provider](
       `Chat title: ${chat_title || "Untitled"}\n\nTranscript:\n${transcript}`,
       api_key,
@@ -234,20 +243,21 @@ Deno.serve(async (req) => {
     const latency_ms = Date.now() - start;
     console.log("AI call succeeded in", latency_ms, "ms");
 
-    // Parse structured JSON from AI response
     let parsed;
     try {
       const cleaned = aiResult.raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       parsed = JSON.parse(cleaned);
     } catch {
       console.error("Failed to parse AI response:", aiResult.raw.substring(0, 200));
-      parsed = { summary: "", objective: "", strategic_forks: [], deferred_decisions: [], chosen_direction: "", next_action: "" };
+      parsed = { title: "", summary: "", objective: "", strategic_forks: [], deferred_decisions: [], chosen_direction: "", next_action: "", recipient: "" };
     }
 
     const strategicForks = Array.isArray(parsed.strategic_forks) ? parsed.strategic_forks.slice(0, 5) : [];
     const deferredDecisions = Array.isArray(parsed.deferred_decisions) ? parsed.deferred_decisions.slice(0, 5) : [];
 
-    // Atomic DB insert via service role
+    // Use AI-generated title if available, fall back to chat_title
+    const resolvedTitle = (parsed.title && parsed.title.trim()) ? parsed.title.trim() : (chat_title || "Untitled");
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -257,14 +267,14 @@ Deno.serve(async (req) => {
       .from("captures")
       .insert({
         source: source || "unknown",
-        chat_title: chat_title || "Untitled",
+        chat_title: resolvedTitle,
         raw_transcript: transcript,
         summary: parsed.summary || "",
         objective: parsed.objective || "",
         alternatives: strategicForks,
         strategic_forks: strategicForks,
         deferred_decisions: deferredDecisions,
-        chosen_direction: parsed.chosen_direction || "",
+        chosen_direction: parsed.chosen_direction || parsed.content || "",
         next_action: parsed.next_action || "",
         executive_snapshot: parsed.executive_snapshot || parsed.summary || "",
         status: "active",
@@ -281,16 +291,24 @@ Deno.serve(async (req) => {
 
     console.log("Capture saved:", data.id);
 
+    // For draft captures, include recipient in response for the UI
+    const responsePayload: Record<string, unknown> = {
+      ...data,
+      provider,
+      model: usedModel,
+      capture_type: capture_type || "project",
+      has_user_intent: !!user_intent,
+      usage: aiResult.usage,
+      latency_ms,
+    };
+
+    if (capture_type === "draft") {
+      responsePayload.draft_recipient = parsed.recipient || "";
+      responsePayload.draft_content = parsed.content || parsed.chosen_direction || "";
+    }
+
     return new Response(
-      JSON.stringify({
-        ...data,
-        provider,
-        model: usedModel,
-        capture_type: capture_type || "planning",
-        has_user_intent: !!user_intent,
-        usage: aiResult.usage,
-        latency_ms,
-      }),
+      JSON.stringify(responsePayload),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {

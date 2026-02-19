@@ -1,22 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Project, CaptureEvent, ActivityEvent, DraftStatus, ProjectFilter, ViewMode, ProjectStatus } from '@/types';
-// ProjectFilter is now: 'active' | 'drafts' | 'archived'
+import { Project, Draft, CaptureEvent, ActivityEvent, DashboardTab, ViewMode } from '@/types';
 import { seedProjects } from '@/data/seed';
+
+const generateId = () => Math.random().toString(36).substring(2, 10);
 
 interface AppState {
   projects: Project[];
+  drafts: Draft[];
   captures: CaptureEvent[];
   storeRawTranscripts: boolean;
-  filter: ProjectFilter;
+  filter: DashboardTab;
   viewMode: ViewMode;
   searchQuery: string;
 
-  setFilter: (f: ProjectFilter) => void;
+  setFilter: (f: DashboardTab) => void;
   setViewMode: (m: ViewMode) => void;
   setSearchQuery: (q: string) => void;
   setStoreRawTranscripts: (v: boolean) => void;
 
+  // Projects
   addProject: (p: Project) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
   deleteProject: (id: string) => void;
@@ -25,19 +28,22 @@ interface AppState {
   addActivityEvent: (projectId: string, event: Omit<ActivityEvent, 'id' | 'timestamp'>) => void;
   deleteActivityEvent: (projectId: string, eventId: string) => void;
 
-  updateDraftStatus: (projectId: string, draftId: string, status: DraftStatus) => void;
-  updateDraftContent: (projectId: string, draftId: string, content: string) => void;
+  // Drafts (first-class entities)
+  addDraft: (d: Draft) => void;
+  updateDraft: (id: string, updates: Partial<Pick<Draft, 'title' | 'content' | 'recipient'>>) => void;
+  archiveDraft: (id: string) => void;
+  unarchiveDraft: (id: string) => void;
+  deleteDraft: (id: string) => void;
 
   addCapture: (c: CaptureEvent) => void;
   clearAllData: () => void;
 }
 
-const generateId = () => Math.random().toString(36).substring(2, 10);
-
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       projects: seedProjects,
+      drafts: [],
       captures: [],
       storeRawTranscripts: false,
       filter: 'active',
@@ -59,18 +65,20 @@ export const useStore = create<AppState>()(
       deleteProject: (id) => set((s) => ({ projects: s.projects.filter((p) => p.id !== id) })),
 
       archiveProject: (id) => {
+        const now = new Date().toISOString();
         set((s) => ({
           projects: s.projects.map((p) =>
-            p.id === id ? { ...p, status: 'archived' as ProjectStatus, lastActiveAt: new Date().toISOString() } : p
+            p.id === id ? { ...p, archivedAt: now, lastActiveAt: now } : p
           ),
         }));
         get().addActivityEvent(id, { type: 'archived', description: 'Project archived' });
       },
 
       reactivateProject: (id) => {
+        const now = new Date().toISOString();
         set((s) => ({
           projects: s.projects.map((p) =>
-            p.id === id ? { ...p, status: 'active' as ProjectStatus, lastActiveAt: new Date().toISOString() } : p
+            p.id === id ? { ...p, archivedAt: null, lastActiveAt: now } : p
           ),
         }));
         get().addActivityEvent(id, { type: 'reactivated', description: 'Project reactivated' });
@@ -101,40 +109,41 @@ export const useStore = create<AppState>()(
           ),
         })),
 
-      updateDraftStatus: (projectId, draftId, status) => {
+      // ── Draft CRUD ────────────────────────────────────────────────────────
+      addDraft: (d) => set((s) => ({ drafts: [d, ...s.drafts] })),
+
+      updateDraft: (id, updates) => {
+        const now = new Date().toISOString();
         set((s) => ({
-          projects: s.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  drafts: p.drafts.map((d) => (d.id === draftId ? { ...d, status } : d)),
-                  lastActiveAt: new Date().toISOString(),
-                }
-              : p
+          drafts: s.drafts.map((d) =>
+            d.id === id ? { ...d, ...updates, updatedAt: now } : d
           ),
         }));
-        get().addActivityEvent(projectId, {
-          type: 'draft_status_changed',
-          description: `Draft status changed to ${status}`,
-        });
       },
 
-      updateDraftContent: (projectId, draftId, content) =>
+      archiveDraft: (id) => {
+        const now = new Date().toISOString();
         set((s) => ({
-          projects: s.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  drafts: p.drafts.map((d) => (d.id === draftId ? { ...d, content } : d)),
-                  lastActiveAt: new Date().toISOString(),
-                }
-              : p
+          drafts: s.drafts.map((d) =>
+            d.id === id ? { ...d, archivedAt: now, updatedAt: now } : d
           ),
-        })),
+        }));
+      },
+
+      unarchiveDraft: (id) => {
+        const now = new Date().toISOString();
+        set((s) => ({
+          drafts: s.drafts.map((d) =>
+            d.id === id ? { ...d, archivedAt: null, updatedAt: now } : d
+          ),
+        }));
+      },
+
+      deleteDraft: (id) => set((s) => ({ drafts: s.drafts.filter((d) => d.id !== id) })),
 
       addCapture: (c) => set((s) => ({ captures: [c, ...s.captures] })),
 
-      clearAllData: () => set({ projects: seedProjects, captures: [], storeRawTranscripts: false }),
+      clearAllData: () => set({ projects: seedProjects, drafts: [], captures: [], storeRawTranscripts: false }),
     }),
     { name: 'context-parking-store' }
   )
