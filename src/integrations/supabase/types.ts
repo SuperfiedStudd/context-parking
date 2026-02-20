@@ -52,10 +52,12 @@ export type Database = {
           ai_model: string | null
           ai_provider: string | null
           alternatives: Json | null
+          capture_type: string | null
           chat_title: string | null
           chosen_direction: string | null
           created_at: string
           deferred_decisions: Json | null
+          draft_recipient: string | null
           executive_snapshot: string | null
           id: string
           next_action: string | null
@@ -71,10 +73,12 @@ export type Database = {
           ai_model?: string | null
           ai_provider?: string | null
           alternatives?: Json | null
+          capture_type?: string | null
           chat_title?: string | null
           chosen_direction?: string | null
           created_at?: string
           deferred_decisions?: Json | null
+          draft_recipient?: string | null
           executive_snapshot?: string | null
           id?: string
           next_action?: string | null
@@ -90,10 +94,12 @@ export type Database = {
           ai_model?: string | null
           ai_provider?: string | null
           alternatives?: Json | null
+          capture_type?: string | null
           chat_title?: string | null
           chosen_direction?: string | null
           created_at?: string
           deferred_decisions?: Json | null
+          draft_recipient?: string | null
           executive_snapshot?: string | null
           id?: string
           next_action?: string | null
