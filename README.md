@@ -59,6 +59,50 @@ graph TD
 
 No authentication layer. No user accounts. A single shared secret protects writes. The web dashboard reads via the Supabase anon key.
 
+### Runtime Sequence (simplified)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Ext as Extension
+    participant Edge as Edge Function
+    participant AI as AI Provider
+    participant DB as Supabase
+
+    User->>Ext: Capture
+    Ext->>Edge: POST transcript
+    Edge->>AI: Analyze
+    alt success
+        AI-->>Edge: Structured context
+    else timeout
+        Edge->>AI: Fallback provider
+        AI-->>Edge: Structured context
+    end
+    Edge->>DB: Persist
+    DB-->>Edge: Confirmed
+    Edge-->>Ext: 200 OK
+    Note over User,DB: Raw transcript always persisted, even if AI fails
+```
+
+Full sequence diagram with retry paths and second opinion flow: [docs/runtime-flow.md](docs/runtime-flow.md)
+
+## Screenshots
+
+| Capture | Dashboard | Resume |
+|---------|-----------|--------|
+| ![capture](demo/capture.png) | ![dashboard](demo/dashboard.png) | ![resume](demo/resume.png) |
+
+## Design and Operational Docs
+
+| Document | Content |
+|----------|---------|
+| [System Design](docs/system-design.md) | System overview, data lifecycle, architecture rationale |
+| [Infrastructure Decisions](docs/infrastructure-decisions.md) | Why Supabase, why Edge Functions, why extension, alternatives considered |
+| [Failure Modes](docs/failure-modes.md) | 7 failure scenarios with data loss analysis and mitigation |
+| [Product Metrics](docs/product-metrics.md) | Activation, retention, success, and failure metrics |
+| [Manual Capture Decision](docs/decisions/manual-capture.md) | Why capture is manual — UX, privacy, determinism |
+| [Security](SECURITY.md) | Data storage, API key handling, transcript privacy |
+
 ## Reliability and Failure Handling
 
 **Multi-provider AI routing.** The system supports OpenAI, Anthropic, and Google as AI backends. If the primary provider fails, the Edge Function falls back to the next available provider with a compatible model. The second opinion feature uses the same fallback chain independently.
