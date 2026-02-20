@@ -27,6 +27,8 @@ graph TD
   EDGE -- Persist --> DB[("Supabase")]
   DB -- Read --> DASH["Web Dashboard"]
   DASH -- Final Context --> USER
+  DASH -- Second Opinion --> AI
+  AI -- Analysis --> DB
 ```
 
 ## Quickstart
