@@ -18,17 +18,30 @@ The browser extension captures chat transcripts and sends them to a Supabase Edg
 
 ```mermaid
 graph TD
-  USER["User / Chat UI"]
+  subgraph Client
+    USER["User / Chat UI"]
+    EXT["Chrome Extension"]
+    DASH["Web Dashboard"]
+  end
 
-  USER -- Capture --> EXT["Chrome Extension"]
-  EXT -- POST transcript --> EDGE["Edge Function"]
-  EDGE -- Run --> AI["AI Providers"]
-  AI -- Result --> EDGE
-  EDGE -- Persist --> DB[("Supabase")]
-  DB -- Read --> DASH["Web Dashboard"]
-  DASH -- Final Context --> USER
-  DASH -- Second Opinion --> AI
-  AI -- Analysis --> DB
+  subgraph Backend
+    EDGE["Edge Function"]
+    AI["AI Providers"]
+  end
+
+  subgraph Storage
+    DB[("Supabase")]
+  end
+
+  USER --> EXT
+  EXT --> EDGE
+  EDGE --> AI
+  AI --> EDGE
+  EDGE --> DB
+  DB --> DASH
+  DASH --> USER
+  DASH -- second opinion --> AI
+  AI --> DB
 ```
 
 ## Quickstart
