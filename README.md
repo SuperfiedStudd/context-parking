@@ -17,47 +17,16 @@ A tool for capturing AI chat sessions and extracting actionable context. Context
 The browser extension captures chat transcripts and sends them to a Supabase Edge Function, which routes to an AI provider for structured summarization before storing results in PostgreSQL.
 
 ```mermaid
-graph TB
-  subgraph Client ["Client Layer"]
-    EXT["Chrome Extension<br/><i>popup.js + content script</i>"]
-    WEB["Web Dashboard<br/><i>React + Vite + Zustand</i>"]
-  end
+graph TD
+  USER["User / Chat UI"]
 
-  subgraph Backend ["Backend Layer"]
-    EDGE["Supabase Edge Function<br/><i>capture-and-summarize</i>"]
-    AI_ROUTER{"AI Router"}
-    OPENAI["OpenAI<br/><i>GPT-4.1</i>"]
-    ANTHROPIC["Anthropic<br/><i>Claude 4 Sonnet</i>"]
-    GOOGLE["Google<br/><i>Gemini 2.0 Flash</i>"]
-  end
-
-  subgraph Storage ["Storage Layer"]
-    DB[("Supabase PostgreSQL<br/><i>captures table</i>")]
-    LOCAL["Browser localStorage<br/><i>projects + drafts</i>"]
-  end
-
-  EXT -- "POST /capture-extension<br/>x-cp-key auth" --> EDGE
-  EDGE --> AI_ROUTER
-  AI_ROUTER --> OPENAI
-  AI_ROUTER --> ANTHROPIC
-  AI_ROUTER --> GOOGLE
-  OPENAI & ANTHROPIC & GOOGLE -- "structured JSON" --> EDGE
-  EDGE -- "insert" --> DB
-  DB -- "read (anon key)" --> WEB
-  WEB -- "promote to project/draft" --> LOCAL
-
-  style Client fill:#1e293b,stroke:#334155,color:#e2e8f0
-  style Backend fill:#0f172a,stroke:#1e3a5f,color:#e2e8f0
-  style Storage fill:#1a1a2e,stroke:#16213e,color:#e2e8f0
-  style EXT fill:#2563eb,stroke:#1d4ed8,color:#fff
-  style WEB fill:#0ea5e9,stroke:#0284c7,color:#fff
-  style EDGE fill:#3b82f6,stroke:#2563eb,color:#fff
-  style AI_ROUTER fill:#6366f1,stroke:#4f46e5,color:#fff
-  style OPENAI fill:#10a37f,stroke:#0d8c6d,color:#fff
-  style ANTHROPIC fill:#d97706,stroke:#b45309,color:#fff
-  style GOOGLE fill:#4285f4,stroke:#3367d6,color:#fff
-  style DB fill:#3fcf8e,stroke:#22c55e,color:#000
-  style LOCAL fill:#64748b,stroke:#475569,color:#fff
+  USER -- Capture --> EXT["Chrome Extension"]
+  EXT -- POST transcript --> EDGE["Edge Function"]
+  EDGE -- Run --> AI["AI Providers"]
+  AI -- Result --> EDGE
+  EDGE -- Persist --> DB[("Supabase")]
+  DB -- Read --> DASH["Web Dashboard"]
+  DASH -- Final Context --> USER
 ```
 
 ## Quickstart
