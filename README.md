@@ -1,41 +1,29 @@
-<div align="center">
+# Context Parking
 
-# 🅿️ Context Parking
+A tool for capturing AI chat sessions and extracting actionable context. Context Parking watches your ChatGPT and Claude conversations, runs them through AI summarization, and stores structured project context — decisions, trade-offs, next steps — in a persistent dashboard.
 
-**AI conversations are full of decisions, trade-offs, and next steps — but they vanish when you close the tab.**
-
-Context Parking captures your ChatGPT and Claude sessions, uses AI to extract what matters,<br>and gives you a dashboard to track projects, park drafts, and never lose context again.
-
-[![Built with React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=white)](https://react.dev)
-[![Supabase](https://img.shields.io/badge/Supabase-Backend-3fcf8e?logo=supabase&logoColor=white)](https://supabase.com)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-</div>
-
----
-
-## ⚡ 2-Minute Demo
+## Demo
 
 ```
-1. npm install && npm run dev        → Dashboard opens at localhost:8080
-2. Load browser-extension/ in Chrome → Extension ready
-3. Open a ChatGPT or Claude chat     → Click "Capture This Chat"
-4. Return to dashboard               → Project appears with AI summary
+1. npm install && npm run dev       → Dashboard at localhost:8080
+2. Load browser-extension/ in Chrome
+3. Open a ChatGPT or Claude conversation
+4. Click the extension → "Capture This Chat"
+5. Return to dashboard → AI-summarized project appears
 ```
 
----
+## Architecture
 
-## 🏗️ Architecture
+The browser extension captures chat transcripts and sends them to a Supabase Edge Function, which routes to an AI provider for structured summarization before storing results in PostgreSQL.
 
 ```mermaid
 graph TB
-  subgraph Client ["🖥️ Client Layer"]
+  subgraph Client ["Client Layer"]
     EXT["Chrome Extension<br/><i>popup.js + content script</i>"]
     WEB["Web Dashboard<br/><i>React + Vite + Zustand</i>"]
   end
 
-  subgraph Backend ["⚙️ Backend Layer"]
+  subgraph Backend ["Backend Layer"]
     EDGE["Supabase Edge Function<br/><i>capture-and-summarize</i>"]
     AI_ROUTER{"AI Router"}
     OPENAI["OpenAI<br/><i>GPT-4.1</i>"]
@@ -43,7 +31,7 @@ graph TB
     GOOGLE["Google<br/><i>Gemini 2.0 Flash</i>"]
   end
 
-  subgraph Storage ["💾 Storage Layer"]
+  subgraph Storage ["Storage Layer"]
     DB[("Supabase PostgreSQL<br/><i>captures table</i>")]
     LOCAL["Browser localStorage<br/><i>projects + drafts</i>"]
   end
@@ -72,108 +60,49 @@ graph TB
   style LOCAL fill:#64748b,stroke:#475569,color:#fff
 ```
 
----
-
-## 📸 Screenshots
-
-<!-- Replace with actual screenshots -->
-> _Coming soon — run locally and explore the dashboard._
-
-| Dashboard | Capture Flow | Draft Editor |
-|-----------|--------------|--------------|
-| _screenshot_ | _screenshot_ | _screenshot_ |
-
----
-
-## 🚀 Quickstart
-
-### Prerequisites
-
-- Node.js 18+
-- A [Supabase](https://supabase.com) project (free tier works)
-- An API key for at least one AI provider (OpenAI, Anthropic, or Google)
-
-### 1. Clone & Install
+## Quickstart
 
 ```sh
 git clone https://github.com/YOUR_USERNAME/context-keeper.git
 cd context-keeper
+cp .env.example .env    # fill in Supabase credentials
 npm install
-```
-
-### 2. Configure Environment
-
-```sh
-cp .env.example .env
-```
-
-Edit `.env` with your Supabase credentials:
-
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
-```
-
-> Find these in [Supabase Dashboard → Settings → API](https://supabase.com/dashboard)
-
-### 3. Deploy Edge Function
-
-```sh
 npx supabase functions deploy capture-and-summarize
-```
-
-### 4. Start the App
-
-```sh
 npm run dev
 ```
 
-Open [http://localhost:8080](http://localhost:8080) — the **Setup Wizard** will guide you through AI provider configuration on first launch.
+The setup wizard will prompt for AI provider configuration on first launch.
 
----
+## Browser Extension
 
-## 🧩 Browser Extension
-
-1. Open `chrome://extensions/`
-2. Enable **Developer mode** (top right)
-3. Click **Load unpacked** → select `browser-extension/`
-4. Click the extension icon and configure:
+1. Open `chrome://extensions/` and enable **Developer mode**
+2. Click **Load unpacked** → select `browser-extension/`
+3. Click the extension icon and enter:
    - **Edge Function URL** — `https://your-project.supabase.co/functions/v1/capture-extension`
-   - **Shared Key** — generate one:
-     ```sh
-     openssl rand -hex 32
-     ```
-     Then add it as `EXTENSION_SHARED_KEY` in [Supabase Edge Function Secrets](https://supabase.com/dashboard)
-5. Navigate to ChatGPT or Claude → open a conversation → **Capture This Chat**
+   - **Shared Key** — generate with `openssl rand -hex 32`, then add as `EXTENSION_SHARED_KEY` in Supabase Edge Function Secrets
 
----
+## Environment Variables
 
-## 🔐 Environment Variables
+| Variable | Description |
+|----------|-------------|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key |
 
-| Variable | Description | Where to Find |
-|----------|-------------|---------------|
-| `VITE_SUPABASE_URL` | Supabase project URL | Dashboard → Settings → API |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key | Dashboard → Settings → API |
+AI provider keys are configured through the setup wizard and stored in browser `localStorage`.
 
-AI provider keys (OpenAI, Anthropic, Google) are configured through the **Setup Wizard** in the web app and stored in browser `localStorage` — never committed to code.
-
----
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Frontend | React 18 · Vite · TypeScript |
-| Styling | Tailwind CSS · shadcn/ui |
-| State | Zustand (local) · Supabase (captures) |
-| AI | OpenAI · Anthropic · Google (via Edge Function) |
+|-------|------------|
+| Frontend | React 18, Vite, TypeScript |
+| Styling | Tailwind CSS, shadcn/ui |
+| State | Zustand (local), Supabase (captures) |
+| AI | OpenAI, Anthropic, Google via Edge Function |
 | Backend | Supabase Edge Functions (Deno) |
 | Database | Supabase PostgreSQL |
 | Extension | Chrome Manifest V3 |
 
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 context-keeper/
@@ -190,20 +119,16 @@ context-keeper/
 └── public/                 # Static assets
 ```
 
----
-
-## 📋 Scripts
+## Scripts
 
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start dev server |
 | `npm run build` | Production build |
-| `npm run lint` | Lint with ESLint |
+| `npm run lint` | Run ESLint |
 | `npm run test` | Run tests |
 | `npm run preview` | Preview production build |
 
----
-
-## 📄 License
+## License
 
 MIT
