@@ -32,6 +32,8 @@ export async function fetchCaptures(): Promise<DbCapture[]> {
     created_at: row.created_at,
     ai_provider: row.ai_provider || undefined,
     ai_model: row.ai_model || undefined,
+    capture_type: row.capture_type || undefined,
+    draft_recipient: row.draft_recipient || undefined,
   }));
 }
 

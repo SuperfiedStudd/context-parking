@@ -1,73 +1,82 @@
 # Context Parking
 
-A local-first tool for parking context from AI chat sessions, tracking decisions, and managing follow-ups.
+A local-first tool for parking context from AI chat sessions — track decisions, manage follow-ups, and draft outbound messages.
 
-## Tech Stack
-
-- React + Vite + TypeScript
-- Tailwind CSS + shadcn/ui
-- Zustand (local state)
-- Supabase (captures database + edge functions)
-
-## Getting Started
+## Quickstart (2 minutes)
 
 ```sh
-git clone <YOUR_GIT_URL>
-cd <YOUR_PROJECT_NAME>
-npm i
+git clone https://github.com/YOUR_USERNAME/context-keeper.git
+cd context-keeper
+cp .env.example .env          # then fill in your Supabase credentials
+npm install
 npm run dev
 ```
 
----
+Open [http://localhost:8080](http://localhost:8080) in your browser.
 
-## Browser Extension Setup
+## Environment Setup
 
-The browser extension captures ChatGPT and Claude conversations, sends them to a Supabase Edge Function for AI summarization, and stores them in the database.
+Create a `.env` file in the project root (or copy `.env.example`):
 
-### 1. Generate a Shared Key
-
-```sh
-openssl rand -hex 32
+```
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 ```
 
-Copy the output — you'll use it in the next two steps.
+You can find these values in your [Supabase Dashboard → Settings → API](https://supabase.com/dashboard).
 
-### 2. Add the Key to Supabase
+## Supabase Edge Functions
 
-Go to your [Supabase Edge Function Secrets](https://supabase.com/dashboard/project/sdjdzvcwfcdtngknrasp/settings/functions) and add:
+Deploy the capture edge function:
 
-- **Name:** `EXTENSION_SHARED_KEY`
-- **Value:** the key you generated above
+```sh
+npx supabase functions deploy capture-and-summarize
+```
 
-### 3. Load the Extension in Chrome
+Set the shared key used by the browser extension:
+
+```sh
+npx supabase secrets set EXTENSION_SHARED_KEY=$(openssl rand -hex 32)
+```
+
+Save the key — you'll need it when configuring the browser extension.
+
+## Browser Extension
 
 1. Open `chrome://extensions/`
 2. Enable **Developer mode** (top right)
-3. Click **Load unpacked**
-4. Select the `browser-extension/` directory from this repo
+3. Click **Load unpacked** → select the `browser-extension/` directory
+4. Click the extension icon and enter:
+   - **Edge Function URL:** `https://YOUR_PROJECT.supabase.co/functions/v1/capture-extension`
+   - **Shared Key:** the key from the step above
+5. Navigate to [ChatGPT](https://chat.openai.com) or [Claude](https://claude.ai), open a conversation, and click **Capture This Chat**
 
-### 4. Configure the Extension
+## Tech Stack
 
-Click the extension icon in Chrome and enter:
-
-- **Edge Function URL:** `https://sdjdzvcwfcdtngknrasp.supabase.co/functions/v1/capture-extension`
-- **Shared Key:** the key from step 1
-
-Click **Save Settings**.
-
-### 5. Capture a Conversation
-
-1. Navigate to [ChatGPT](https://chat.openai.com) or [Claude](https://claude.ai)
-2. Open a conversation
-3. Click the extension icon
-4. Click **Capture This Chat**
-
-The conversation will be summarized by AI and stored in your Supabase database. View captured sessions on the **Capture** page in the web app.
-
----
+- **Frontend:** React + Vite + TypeScript
+- **Styling:** Tailwind CSS + shadcn/ui
+- **State:** Zustand (local) + Supabase (captures DB)
+- **AI:** Supabase Edge Functions → OpenAI / Anthropic / Google
 
 ## Architecture
 
-- **Browser Extension** → POST with `x-cp-key` header → **Edge Function** → AI summarize → **Supabase DB**
-- **Web App** → reads captures from DB via anon key (no shared key needed)
-- No authentication, no user accounts — just a single shared secret protecting writes
+```
+Browser Extension → POST /capture-extension → Edge Function → AI → Supabase DB
+Web App → reads captures from DB via anon key
+```
+
+No authentication or user accounts — a single shared secret protects writes.
+
+## Scripts
+
+| Command           | Description              |
+|-------------------|--------------------------|
+| `npm run dev`     | Start dev server         |
+| `npm run build`   | Production build         |
+| `npm run lint`    | Lint with ESLint         |
+| `npm run test`    | Run tests                |
+| `npm run preview` | Preview production build |
+
+## License
+
+MIT

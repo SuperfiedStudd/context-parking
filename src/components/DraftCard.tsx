@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 
 interface DraftCardProps {
   draft: Draft;
+  viewMode?: 'list' | 'grid';
 }
 
-export function DraftCard({ draft }: DraftCardProps) {
+export function DraftCard({ draft, viewMode = 'list' }: DraftCardProps) {
   const navigate = useNavigate();
 
   // Content preview: strip markdown symbols
@@ -19,6 +20,46 @@ export function DraftCard({ draft }: DraftCardProps) {
     .replace(/\n+/g, ' ')
     .trim()
     .slice(0, 180);
+
+  if (viewMode === 'grid') {
+    return (
+      <div
+        className="bg-card border rounded-xl p-4 card-shadow transition-smooth hover:card-shadow-hover cursor-pointer group flex flex-col h-full relative"
+        onClick={() => navigate(`/drafts/${draft.id}`)}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent-foreground">
+            <Mail className="w-4 h-4" />
+          </div>
+          <span className="text-xs text-muted-foreground/60">{relativeTime(draft.updatedAt)}</span>
+        </div>
+
+        <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors line-clamp-1">
+          {draft.title || 'Untitled Draft'}
+        </h3>
+
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
+          <User className="w-3 h-3 flex-shrink-0" />
+          {draft.recipient ? (
+            <span className="truncate max-w-[150px]">{draft.recipient}</span>
+          ) : (
+            <span className="italic text-muted-foreground/60">No recipient</span>
+          )}
+        </div>
+
+        {preview && (
+          <p className="text-xs text-muted-foreground line-clamp-4 leading-relaxed flex-1">
+            {preview}
+          </p>
+        )}
+
+        {/* Hover arrow */}
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-smooth">
+          <ArrowRight className="w-4 h-4 text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

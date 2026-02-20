@@ -15,8 +15,8 @@ export function AppHeader() {
   const currentSection = location.pathname.startsWith('/capture')
     ? 'Capture'
     : location.pathname.startsWith('/settings')
-    ? 'Settings'
-    : 'Projects';
+      ? 'Settings'
+      : 'Projects';
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -36,10 +36,10 @@ export function AppHeader() {
 
   const filteredProjects = searchQuery
     ? projects.filter(
-        (p) =>
-          p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.objective.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      (p) =>
+        p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.objective.toLowerCase().includes(searchQuery.toLowerCase())
+    )
     : [];
 
   return (
@@ -48,13 +48,11 @@ export function AppHeader() {
         {/* Left */}
         <div className="flex items-center gap-3">
           <Link to="/projects" className="flex items-center gap-2 group">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center transition-smooth group-hover:scale-105">
-              <Layers className="w-4 h-4 text-primary-foreground" />
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center transition-smooth group-hover:scale-105">
+              <Layers className="w-5 h-5 text-primary" />
             </div>
-            <span className="font-semibold text-sm hidden sm:inline">Context Parking</span>
+            <span className="font-bold text-lg tracking-tight hidden sm:inline">Context Parking</span>
           </Link>
-          <span className="text-muted-foreground text-sm">/</span>
-          <span className="text-sm font-medium">{currentSection}</span>
         </div>
 
         {/* Center — Search */}

@@ -108,7 +108,12 @@ export default function Capture() {
 
   // Promote a DB capture — routes to Project or Draft based on capture_type
   const promoteCapture = async (cap: DbCapture) => {
+    console.log('[promoteCapture] capture_type:', cap.capture_type, '| chat_title:', cap.chat_title);
+    console.log('[promoteCapture] store.drafts BEFORE:', useStore.getState().drafts.length);
+    console.log('[promoteCapture] store.projects BEFORE:', useStore.getState().projects.length);
+
     if (cap.capture_type === 'draft') {
+      console.log('[promoteCapture] → DRAFT branch');
       // Create standalone Draft entity
       const now = new Date().toISOString();
       const newDraft: Draft = {
@@ -120,15 +125,19 @@ export default function Capture() {
         updatedAt: now,
       };
       addDraft(newDraft);
+      console.log('[promoteCapture] store.drafts AFTER addDraft:', useStore.getState().drafts.length);
       try {
         await markCapturePromoted(cap.id);
         queryClient.invalidateQueries({ queryKey: ['db-captures'] });
       } catch (e) {
         console.error('Failed to mark capture promoted:', e);
       }
+      // Ensure we land on drafts tab if user goes back
+      useStore.getState().setFilter('drafts');
       toast.success('Draft promoted');
       navigate(`/drafts/${newDraft.id}`);
     } else {
+      console.log('[promoteCapture] → PROJECT branch');
       // Create standalone Project entity
       const newProject: Project = {
         id: generateId(),
@@ -148,6 +157,7 @@ export default function Capture() {
         }],
       };
       addProject(newProject);
+      console.log('[promoteCapture] store.projects AFTER addProject:', useStore.getState().projects.length);
       try {
         await markCapturePromoted(cap.id);
         queryClient.invalidateQueries({ queryKey: ['db-captures'] });

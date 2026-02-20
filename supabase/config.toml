@@ -1,4 +1,4 @@
-project_id = "sdjdzvcwfcdtngknrasp"
+project_id = "your-project-id"
 
 [functions.capture-and-summarize]
 verify_jwt = false

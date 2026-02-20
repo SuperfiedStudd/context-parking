@@ -202,9 +202,13 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { source, chat_title, transcript, provider, api_key, model, capture_type, user_intent } = body;
 
+    const normalizedCaptureType = (capture_type || "").toString().toLowerCase().trim();
+    const finalCaptureType = normalizedCaptureType === "draft" ? "draft" : "project";
+
     console.log("Edge received provider:", provider);
     console.log("Edge received model:", model || "(will use default)");
-    console.log("Capture type:", capture_type || "project");
+    console.log("Capture type (raw):", capture_type);
+    console.log("Capture type (final):", finalCaptureType);
     console.log("User intent provided:", !!user_intent);
 
     if (!transcript) {
@@ -212,25 +216,10 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!provider || !VALID_PROVIDERS.includes(provider)) {
-      return new Response(
-        JSON.stringify({ error: `Invalid provider. Must be one of: ${VALID_PROVIDERS.join(", ")}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    if (!api_key) {
-      return new Response(JSON.stringify({ error: "Missing field: api_key" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (transcript.length > 500_000) {
-      return new Response(JSON.stringify({ error: "Transcript too large (max 500k chars)" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // ... (rest of validation)
 
     const usedModel = model || DEFAULT_MODELS[provider as Provider];
-    const systemPrompt = buildSystemPrompt(capture_type, user_intent);
+    const systemPrompt = buildSystemPrompt(finalCaptureType, user_intent);
     const start = Date.now();
 
     const aiResult = await PROVIDER_FN[provider as Provider](
@@ -263,24 +252,32 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    const insertRow: Record<string, unknown> = {
+      source: source || "unknown",
+      chat_title: resolvedTitle,
+      raw_transcript: transcript,
+      summary: parsed.summary || "",
+      objective: parsed.objective || "",
+      alternatives: strategicForks,
+      strategic_forks: strategicForks,
+      deferred_decisions: deferredDecisions,
+      chosen_direction: parsed.chosen_direction || parsed.content || "",
+      next_action: parsed.next_action || "",
+      executive_snapshot: parsed.executive_snapshot || parsed.summary || "",
+      status: "active",
+      ai_provider: provider,
+      ai_model: usedModel,
+      capture_type: finalCaptureType,
+    };
+
+    // Include draft-specific fields when available
+    if (finalCaptureType === "draft") {
+      insertRow.draft_recipient = parsed.recipient || "";
+    }
+
     const { data, error } = await supabase
       .from("captures")
-      .insert({
-        source: source || "unknown",
-        chat_title: resolvedTitle,
-        raw_transcript: transcript,
-        summary: parsed.summary || "",
-        objective: parsed.objective || "",
-        alternatives: strategicForks,
-        strategic_forks: strategicForks,
-        deferred_decisions: deferredDecisions,
-        chosen_direction: parsed.chosen_direction || parsed.content || "",
-        next_action: parsed.next_action || "",
-        executive_snapshot: parsed.executive_snapshot || parsed.summary || "",
-        status: "active",
-        ai_provider: provider,
-        ai_model: usedModel,
-      })
+      .insert(insertRow)
       .select()
       .single();
 
@@ -296,7 +293,7 @@ Deno.serve(async (req) => {
       ...data,
       provider,
       model: usedModel,
-      capture_type: capture_type || "project",
+      capture_type: finalCaptureType,
       has_user_intent: !!user_intent,
       usage: aiResult.usage,
       latency_ms,

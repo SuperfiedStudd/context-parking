@@ -30,7 +30,7 @@ import {
 } from '@/lib/configStore';
 import { AiProviderSettings } from '@/components/AiProviderSettings';
 
-const EDGE_FUNCTION_URL = `https://sdjdzvcwfcdtngknrasp.supabase.co/functions/v1/capture-extension`;
+const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/capture-extension`;
 
 interface SettingsPageProps {
   onOpenWizard?: () => void;
