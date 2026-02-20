@@ -1,5 +1,5 @@
 // Content script bridge: web app → extension background
-// Injected into localhost and lovable.app pages via manifest content_scripts.
+// Injected into matching pages via manifest content_scripts.
 
 console.log("[Extension CS] config-sync.js loaded");
 
