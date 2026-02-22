@@ -27,5 +27,19 @@
         "config-sync.js"
       ]
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "adapters/*"
+      ],
+      "matches": [
+        "*://*.chatgpt.com/*",
+        "*://chat.openai.com/*",
+        "*://*.claude.ai/*",
+        "*://*.gemini.google.com/*",
+        "*://*.bard.google.com/*"
+      ]
+    }
   ]
 }

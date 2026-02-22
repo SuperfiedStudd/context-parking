@@ -172,26 +172,7 @@ export default function Capture() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-xl font-bold mb-1">New Capture</h1>
-        <p className="text-sm text-muted-foreground mb-6">Paste a chat transcript and instruction to extract context.</p>
-
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="chatId" className="text-sm font-medium">Chat / Session ID</Label>
-            <Input id="chatId" value={chatId} onChange={(e) => setChatId(e.target.value)} placeholder="e.g., square-apm-research" className="mt-1" />
-          </div>
-          <div>
-            <Label htmlFor="transcript" className="text-sm font-medium">Transcript</Label>
-            <Textarea id="transcript" value={transcript} onChange={(e) => setTranscript(e.target.value)} placeholder="Paste chat transcript here..." className="mt-1 min-h-[160px] font-mono text-xs" />
-          </div>
-          <div>
-            <Label htmlFor="instruction" className="text-sm font-medium">Instruction</Label>
-            <Input id="instruction" value={instruction} onChange={(e) => setInstruction(e.target.value)} placeholder='e.g., "plan observability-first approach, remind me in 3 days"' className="mt-1" />
-          </div>
-          <Button className="w-full gap-2" onClick={handleCapture}>
-            <Upload className="w-4 h-4" /> Capture
-          </Button>
-        </div>
+        {/* New Capture form hidden — page loads directly into Recent Captures */}
 
         {/* Recent DB Captures */}
         <div className="mt-10">
