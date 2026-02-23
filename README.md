@@ -88,22 +88,35 @@ Full sequence diagram with retry paths and second opinion flow: [docs/runtime-fl
 
 ## Screenshots
 
-<p align="center">
-  <img src="demo/extension.png" width="48%" alt="Chrome Extension Capture Flow" />
-  <img src="demo/dashboard.png" width="48%" alt="Main Dashboard Overview" />
-</p>
-<p align="center">
-  <img src="demo/project1.png" width="48%" alt="Project Insights View" />
-  <img src="demo/project2.png" width="48%" alt="Project Details and Setup" />
-</p>
-<p align="center">
-  <img src="demo/drafts.png" width="48%" alt="Draft Captures Interface" />
-  <img src="demo/contextinject.png" width="48%" alt="Context Injection Flow" />
-</p>
-<p align="center">
-  <img src="demo/secondop1.png" width="48%" alt="Second Opinion Provider Selection" />
-  <img src="demo/secondop2.png" width="48%" alt="Second Opinion AI Verification" />
-</p>
+### 1. Capture from Any AI Chat
+
+![Chrome Extension Capture Flow](demo/extension.png)
+
+Instantly extract the full transcript from any ChatGPT or Claude conversation using the Chrome extension.
+
+### 2. Structured Project Dashboard
+
+![Main Dashboard Overview](demo/dashboard.png)
+
+Review all captured context and organize sessions by promoting them to specific, tracked projects.
+
+### 3. Project Detail View
+
+![Project Details and Setup](demo/project2.png)
+
+View structured context blocks automatically extracted from raw transcripts, including strategic alternatives and deferred decisions.
+
+### 4. Multi-Model Second Opinion Layer
+
+![Second Opinion AI Verification](demo/secondop2.png)
+
+Request a second opinion from distinct AI providers to cross-validate decisions and identify missing nuance.
+
+### 5. Compile Context Inject Prompt
+
+![Context Injection Flow](demo/contextinject.png)
+
+Generate a deterministic resume prompt, combining all project context to seamlessly continue work in a new AI session.
 
 ## Design and Operational Docs
 
