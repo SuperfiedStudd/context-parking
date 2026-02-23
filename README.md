@@ -88,9 +88,22 @@ Full sequence diagram with retry paths and second opinion flow: [docs/runtime-fl
 
 ## Screenshots
 
-| Capture | Dashboard | Resume |
-|---------|-----------|--------|
-| ![capture](demo/capture.png) | ![dashboard](demo/dashboard.png) | ![resume](demo/resume.png) |
+<p align="center">
+  <img src="demo/extension.png" width="48%" alt="Chrome Extension Capture Flow" />
+  <img src="demo/dashboard.png" width="48%" alt="Main Dashboard Overview" />
+</p>
+<p align="center">
+  <img src="demo/project1.png" width="48%" alt="Project Insights View" />
+  <img src="demo/project2.png" width="48%" alt="Project Details and Setup" />
+</p>
+<p align="center">
+  <img src="demo/drafts.png" width="48%" alt="Draft Captures Interface" />
+  <img src="demo/contextinject.png" width="48%" alt="Context Injection Flow" />
+</p>
+<p align="center">
+  <img src="demo/secondop1.png" width="48%" alt="Second Opinion Provider Selection" />
+  <img src="demo/secondop2.png" width="48%" alt="Second Opinion AI Verification" />
+</p>
 
 ## Design and Operational Docs
 
